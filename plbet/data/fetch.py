@@ -479,6 +479,9 @@ def _espn_dates(s: requests.Session, slug: str, season: int, today: dt.date) -> 
         if r.status_code != 200:
             raise requests.HTTPError(f"HTTP {r.status_code}: {r.text[:200]!r}")
         cal = []
+        if probe == first:
+            raw = [lg.get("calendar") for lg in r.json().get("leagues", []) or []]
+            log(f"espn {slug} {season} calendar: {json.dumps(raw)[:600]}")
         for lg in r.json().get("leagues", []) or []:
             for c in lg.get("calendar", []) or []:
                 # Either match days ("2026-09-16T07:00Z") or rounds with a
@@ -506,6 +509,11 @@ def _espn_dates(s: requests.Session, slug: str, season: int, today: dt.date) -> 
         if nxt is None or nxt > last:
             break
         probe = nxt
+    # Calendars can lag behind: always look at the last ten days too.
+    for i in range(11):
+        d = today - dt.timedelta(days=i)
+        if first <= d <= last:
+            days.add(d)
     if not days and not cal:
         log(f"espn {slug} {season}: no calendar, checking every day")
         days = {first + dt.timedelta(days=i) for i in range((last - first).days + 1)}
