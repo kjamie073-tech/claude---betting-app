@@ -394,130 +394,206 @@ ESPN_INTERNATIONAL = ["fifa.friendly", "uefa.nations", "uefa.euroq", "uefa.euro"
                       "fifa.worldq.caf", "fifa.worldq.afc", "fifa.worldq.concacaf",
                       "conmebol.america", "caf.nations", "concacaf.gold",
                       "concacaf.nations.league", "afc.asian.cup"]
-# Keys that only carry pictures, links and ids for other APIs.
-ESPN_DROP = {"links", "logo", "logos", "headshot", "flag", "uid", "guid", "$ref", "href",
-             "color", "alternateColor", "images", "image", "broadcasts", "odds",
-             "news", "article", "videos", "standings", "commentary", "headlines"}
+ESPN_PLAYER_STATS = {"totalGoals": "goals", "goalAssists": "assists", "totalShots": "shots",
+                     "shotsOnTarget": "sot", "yellowCards": "yellow", "redCards": "red",
+                     "foulsCommitted": "fouls"}
+ESPN_TEAM_STATS = {"wonCorners": "corners", "totalShots": "shots", "shotsOnTarget": "sot",
+                   "foulsCommitted": "fouls", "yellowCards": "yellow", "redCards": "red",
+                   "possessionPct": "possession"}
 
 
-def _espn_trim(x: Any) -> Any:
-    if isinstance(x, dict):
-        return {k: _espn_trim(v) for k, v in x.items() if k not in ESPN_DROP}
-    if isinstance(x, list):
-        return [_espn_trim(v) for v in x]
-    return x
+def _num(x) -> float | None:
+    try:
+        return float(x)
+    except (TypeError, ValueError):
+        return None
 
 
-def _months(season: int, today: dt.date) -> list[tuple[dt.date, dt.date]]:
-    """(first, last) day of each month of a season (July to June) up to today."""
-    out = []
-    d = dt.date(season, 7, 1)
-    while d <= min(today, dt.date(season + 1, 6, 30)):
-        nxt = dt.date(d.year + (d.month == 12), d.month % 12 + 1, 1)
-        out.append((d, min(nxt - dt.timedelta(days=1), today)))
-        d = nxt
-    return out
+def espn_compact(league: str, ev: dict, sm: dict) -> dict[str, Any]:
+    """The parts of an ESPN match summary the model uses, about 2 KB a match.
 
-
-_ESPN_QUERY: list[str] = []
-
-
-def _espn_events(s: requests.Session, slug: str, first: dt.date, last: dt.date) -> list[dict]:
-    """Finished and scheduled events of one competition between two dates.
-
-    The scoreboard's accepted query shapes vary, so try a few and remember
-    the first one that works.
+    Players: starter, minutes (from substitutions, red cards and extra time),
+    goals, assists, shots, shots on target, cards, fouls. Teams: score and the
+    box score's corners, shots, cards, fouls and possession.
     """
-    shapes = _ESPN_QUERY or ["dates={a}-{b}&limit=500", "dates={a}-{b}", "dates={a}{b6}"]
-    errors = []
-    for q in shapes:
-        url = (f"{ESPN_BASE}/{slug}/scoreboard?"
-               + q.format(a=f"{first:%Y%m%d}", b=f"{last:%Y%m%d}", b6=""))
-        r = get(s, url)
-        if r.status_code == 200:
-            if not _ESPN_QUERY:
-                _ESPN_QUERY.append(q)
-                log(f"espn: scoreboard query shape '{q}' works")
-            return r.json().get("events", [])
-        errors.append(f"{q} -> {r.status_code} {r.text[:200]!r}")
-    if len(errors) > 1:
-        log(f"espn {slug} {first}: " + " | ".join(errors))
-    raise requests.HTTPError(errors[-1])
+    comp = (sm.get("header", {}).get("competitions") or [{}])[0]
+    teams = {}
+    for c in comp.get("competitors", []):
+        t = c.get("team", {})
+        teams[str(t.get("id"))] = {"id": str(t.get("id")), "name": t.get("displayName"),
+                                   "side": c.get("homeAway"), "score": _num(c.get("score"))}
+    keys = sm.get("keyEvents", []) or []
+    periods = max([(k.get("period") or {}).get("number", 0) for k in keys] + [2])
+    end = 120.0 if periods >= 3 else 90.0
+    on, off = {}, {}
+    for k in keys:
+        kind = (k.get("type") or {}).get("type", "")
+        minute = min(((k.get("clock") or {}).get("value") or 0.0) / 60.0, end)
+        ps = [str((p.get("athlete") or {}).get("id")) for p in k.get("participants", [])]
+        if kind == "substitution" and len(ps) >= 2:
+            on[ps[0]] = minute
+            off[ps[1]] = minute
+        elif "red" in kind and ps:
+            off.setdefault(ps[0], minute)
+    players = []
+    for side in sm.get("rosters", []) or []:
+        tid = str((side.get("team") or {}).get("id"))
+        for p in side.get("roster", []) or []:
+            a = p.get("athlete") or {}
+            pid = str(a.get("id"))
+            st = {s.get("name"): s.get("value") for s in p.get("stats", []) or []}
+            starter = bool(p.get("starter"))
+            if not starter and not p.get("subbedIn") and pid not in on:
+                continue
+            start = 0.0 if starter else on.get(pid, end)
+            stop = off.get(pid, end)
+            players.append({
+                "id": pid, "name": a.get("displayName"), "team": tid, "starter": starter,
+                "minutes": round(max(stop - start, 0.0), 1),
+                "pos": (p.get("position") or {}).get("abbreviation"),
+                **{v: st.get(k) for k, v in ESPN_PLAYER_STATS.items()},
+            })
+    for t in (sm.get("boxscore") or {}).get("teams", []) or []:
+        tid = str((t.get("team") or {}).get("id"))
+        st = {s.get("name"): _num(s.get("displayValue")) for s in t.get("statistics", []) or []}
+        if tid in teams:
+            teams[tid].update({v: st.get(k) for k, v in ESPN_TEAM_STATS.items()})
+    return {"league": league, "event": str(ev.get("id")),
+            "date": comp.get("date") or ev.get("date"), "name": ev.get("name"),
+            "season": (sm.get("header", {}).get("season") or {}).get("name"),
+            "neutral": comp.get("neutralSite"), "periods": periods,
+            "teams": list(teams.values()), "players": players}
+
+
+def _espn_dates(s: requests.Session, slug: str, season: int, today: dt.date) -> list[dt.date]:
+    """Days with matches in a competition's season (July to June), up to today.
+
+    The scoreboard rejects date ranges, but its ``calendar`` lists the days
+    that have matches. Falls back to every day if there is no calendar.
+    """
+    first, last = dt.date(season, 7, 1), min(today, dt.date(season + 1, 6, 30))
+    days: set[dt.date] = set()
+    probe = first
+    for _ in range(4):
+        r = get(s, f"{ESPN_BASE}/{slug}/scoreboard?dates={probe:%Y%m%d}")
+        if r.status_code != 200:
+            raise requests.HTTPError(f"HTTP {r.status_code}: {r.text[:200]!r}")
+        cal = []
+        for lg in r.json().get("leagues", []) or []:
+            for c in lg.get("calendar", []) or []:
+                if isinstance(c, str):
+                    cal.append(c)
+                elif isinstance(c, dict):
+                    cal += [e.get("startDate") for e in c.get("entries", []) or []
+                            if isinstance(e, dict)] or [c.get("startDate") or c.get("value")]
+        for c in cal:
+            try:
+                d = dt.date.fromisoformat(str(c)[:10])
+            except ValueError:
+                continue
+            if first <= d <= last:
+                days.add(d)
+        later = [d for d in days if d > probe]
+        # A calendar may cover one stage only; ask again after its last day.
+        nxt = max(later) + dt.timedelta(days=1) if later else None
+        if nxt is None or nxt > last:
+            break
+        probe = nxt
+    if not days and not cal:
+        log(f"espn {slug} {season}: no calendar, checking every day")
+        days = {first + dt.timedelta(days=i) for i in range((last - first).days + 1)}
+    return sorted(days)
 
 
 def fetch_espn(out: Path, seasons: list[int], refresh_all: bool, max_matches: int) -> dict[str, Any]:
-    """Line-ups and player stats from cup, European and international games.
+    """Line-ups, minutes and stats from cup, European and international games.
 
     One gzipped JSON-lines file per competition and month
-    (``espn/<slug>/<YYYY-MM>.jsonl.gz``); each line is one finished match:
-    the summary's header, rosters (with per-player stats and substitutions),
-    key events and team box score, with pictures and links stripped. Months
-    already stored are only re-read while they could still change.
+    (``espn/<slug>/<YYYY-MM>.jsonl.gz``), one compact match per line
+    (``espn_compact``). Days already stored are not fetched again unless
+    they are within the last four days (late corrections).
     """
     import gzip
 
     folder = out / "espn"
     s = make_session()
     today = dt.date.today()
-    fetched, failures, leagues_failed = 0, [], {}
+    fetched, failures, comps_failed = 0, [], {}
     for slug in ESPN_CLUB + ESPN_INTERNATIONAL:
         for season in seasons:
-            for first, last in _months(season, today):
+            if fetched >= max_matches:
+                break
+            done_path = folder / slug / f"days_{season}.json"
+            done_days = set(json.loads(done_path.read_text())) \
+                if done_path.exists() and not refresh_all else set()
+            try:
+                days = _espn_dates(s, slug, season, today)
+            except Exception as exc:
+                comps_failed[slug] = f"{type(exc).__name__}: {exc}"[:200]
+                break
+            by_month: dict[str, dict[str, dict]] = {}
+            for day in days:
                 if fetched >= max_matches:
                     break
-                path = folder / slug / f"{first:%Y-%m}.jsonl.gz"
-                settled = last < today - dt.timedelta(days=4)
-                if path.exists() and settled and not refresh_all:
+                settled = day < today - dt.timedelta(days=4)
+                if day.isoformat() in done_days and settled:
                     continue
+                month = f"{day:%Y-%m}"
+                if month not in by_month:
+                    path = folder / slug / f"{month}.jsonl.gz"
+                    by_month[month] = {}
+                    if path.exists() and not refresh_all:
+                        with gzip.open(path, "rt", encoding="utf-8") as f:
+                            for line in f:
+                                rec = json.loads(line)
+                                by_month[month][rec["event"]] = rec
                 try:
-                    events = _espn_events(s, slug, first, last)
+                    r = get(s, f"{ESPN_BASE}/{slug}/scoreboard?dates={day:%Y%m%d}")
+                    r.raise_for_status()
+                    events = r.json().get("events", [])
                 except Exception as exc:
-                    leagues_failed[slug] = f"{type(exc).__name__}: {exc}"[:200]
-                    break
-                done = {}
-                if path.exists() and not refresh_all:
-                    with gzip.open(path, "rt", encoding="utf-8") as f:
-                        for line in f:
-                            rec = json.loads(line)
-                            done[str(rec["event"])] = rec
-                new = 0
+                    failures.append(f"{slug} {day}: {exc}")
+                    continue
+                ok = True
                 for ev in events:
                     eid = str(ev.get("id"))
-                    completed = (ev.get("status", {}).get("type", {}) or {}).get("completed")
-                    if not completed or eid in done:
+                    completed = ((ev.get("status") or {}).get("type") or {}).get("completed")
+                    if not completed:
+                        ok = False
+                        continue
+                    if eid in by_month[month] and settled:
                         continue
                     try:
                         sr = get(s, f"{ESPN_BASE}/{slug}/summary?event={eid}")
                         sr.raise_for_status()
-                        sm = sr.json()
-                        done[eid] = {
-                            "league": slug, "event": eid, "date": ev.get("date"),
-                            "name": ev.get("name"),
-                            "header": _espn_trim(sm.get("header", {})),
-                            "rosters": _espn_trim(sm.get("rosters", [])),
-                            "keyEvents": _espn_trim(sm.get("keyEvents", [])),
-                            "boxscore": _espn_trim(sm.get("boxscore", {})),
-                        }
+                        by_month[month][eid] = espn_compact(slug, ev, sr.json())
                         fetched += 1
-                        new += 1
                     except Exception as exc:
                         failures.append(f"{slug} {eid}: {exc}")
-                    time.sleep(0.1)
-                # An empty file marks a settled month with no games, so it is not asked again.
-                if new or (not path.exists() and (done or settled)):
-                    path.parent.mkdir(parents=True, exist_ok=True)
-                    with gzip.open(path, "wt", encoding="utf-8") as f:
-                        for rec in sorted(done.values(), key=lambda r: r.get("date") or ""):
-                            f.write(json.dumps(rec, separators=(",", ":"), ensure_ascii=False))
-                            f.write("\n")
-                if new:
-                    log(f"espn {slug} {first:%Y-%m}: {new} new matches")
+                        ok = False
+                    time.sleep(0.05)
+                if ok and settled:
+                    done_days.add(day.isoformat())
+            for month, recs in by_month.items():
+                path = folder / slug / f"{month}.jsonl.gz"
+                path.parent.mkdir(parents=True, exist_ok=True)
+                with gzip.open(path, "wt", encoding="utf-8") as f:
+                    for rec in sorted(recs.values(), key=lambda r: r.get("date") or ""):
+                        f.write(json.dumps(rec, separators=(",", ":"), ensure_ascii=False))
+                        f.write("\n")
+            if days:
+                done_path.parent.mkdir(parents=True, exist_ok=True)
+                done_path.write_text(json.dumps(sorted(done_days)))
+            n = sum(len(v) for v in by_month.values())
+            if by_month:
+                log(f"espn {slug} {season}: {len(days)} match days, {n} matches in "
+                    f"{len(by_month)} months touched")
     log(f"espn: {fetched} matches fetched, {len(failures)} failures, "
-        f"competitions failed: {sorted(leagues_failed)}")
-    if fetched == 0 and len(leagues_failed) == len(ESPN_CLUB + ESPN_INTERNATIONAL):
-        raise RuntimeError(f"every ESPN competition failed: {leagues_failed}")
+        f"competitions failed: {comps_failed}")
+    if fetched == 0 and len(comps_failed) == len(ESPN_CLUB + ESPN_INTERNATIONAL):
+        raise RuntimeError(f"every ESPN competition failed: {comps_failed}")
     return {"matches_fetched": fetched, "failures": failures[:50],
-            "competitions_failed": leagues_failed}
+            "competitions_failed": comps_failed}
 
 
 # --------------------------------------------------------------------------
