@@ -74,6 +74,10 @@ Private files live in the project's shared folder, never in this public repo:
    yellow as 1 and a red as 2: `card_weights: [1, 2]`).
 4. **Run it.** `python -m plbet analyse <file> --out /mnt/project-files/betting/reports`
 5. **Sanity-check before replying.**
+   - Read the report's "Games in all competitions" section: short rest, a
+     cup or European game in the next few days, international minutes and
+     long trips home. Turn what matters into `minutes:` or XI changes in the
+     match file and run again (the model does not adjust for these by itself).
    - Do the projected/confirmed XIs look right? Players who moved clubs in the
      window or have no Premier League history are listed in the report notes;
      put the real XI in the match file if the projection is off.
@@ -149,6 +153,8 @@ docs/BACKTEST.md has the evidence; the points that matter when replying:
 - Corners/cards anchors use an even model/market split that has not been
   backtested (there is no free historical corners/cards odds data).
 - Player fouls, tackles and offsides are not modelled.
+- Cup, European and international games feed the workload notes only; the
+  ratings and player rates still come from league games.
 - Football-data.co.uk has no Pinnacle odds after part of 2025-26; Bet365's
   closing prices and the market-average closing prices are the sharp
   reference now.
@@ -179,6 +185,8 @@ and report ROI with `tracker summary <path>`.
 - `plbet/markets.py` — market specs evaluated on simulations
 - `plbet/builder.py` — builder pricing, leg relationships, suggestions
 - `plbet/acca.py` — one builder per match stacked into an acca
+- `plbet/workload.py` — games in all competitions, rest days, players' recent
+  minutes and international duty (ESPN data, `load.espn_*`)
 - `plbet/analysis.py` — puts it all together for one match
 - `plbet/report.py`, `plbet/team_stats.py` — the markdown report
 - `plbet/staking.py`, `plbet/tracker.py` — staking plan and Excel tracker
