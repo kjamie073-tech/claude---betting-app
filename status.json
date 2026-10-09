@@ -44,7 +44,13 @@
       "matches_fetched": 6406,
       "failures": [],
       "competitions_failed": {}
+    },
+    "sofascore": {
+      "ok": false,
+      "failed_at": "2026-10-09T23:52:33+00:00",
+      "error": "HTTPError: scheduled-events HTTP 403: '{\"error\": {\"code\": 403, \"reason\": \"Forbidden\" }}'",
+      "last_success": null
     }
   },
-  "updated_at": "2026-10-09T23:52:08+00:00"
+  "updated_at": "2026-10-09T23:52:33+00:00"
 }
