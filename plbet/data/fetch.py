@@ -546,9 +546,9 @@ def fetch_espn(out: Path, seasons: list[int], refresh_all: bool, max_matches: in
             if fetched >= max_matches or time.monotonic() > deadline:
                 break
             done_path = folder / slug / f"days_{season}.json"
-            if done_path.exists() and not refresh_all and not season_is_live(season) \
-                    and json.loads(done_path.read_text()):
-                continue                     # finished season, already stored
+            complete = folder / slug / f"complete_{season}"
+            if complete.exists() and not refresh_all:
+                continue                     # finished season, fully stored
             done_days = set(json.loads(done_path.read_text())) \
                 if done_path.exists() and not refresh_all else set()
             try:
@@ -557,8 +557,10 @@ def fetch_espn(out: Path, seasons: list[int], refresh_all: bool, max_matches: in
                 comps_failed[slug] = f"{type(exc).__name__}: {exc}"[:200]
                 break
             by_month: dict[str, dict[str, dict]] = {}
+            all_done = True
             for day in days:
                 if fetched >= max_matches or time.monotonic() > deadline:
+                    all_done = False
                     break
                 settled = day < today - dt.timedelta(days=4)
                 if day.isoformat() in done_days and settled:
@@ -578,6 +580,7 @@ def fetch_espn(out: Path, seasons: list[int], refresh_all: bool, max_matches: in
                     events = r.json().get("events", [])
                 except Exception as exc:
                     failures.append(f"{slug} {day}: {exc}")
+                    all_done = False
                     continue
                 ok = True
                 for ev in events:
@@ -599,6 +602,8 @@ def fetch_espn(out: Path, seasons: list[int], refresh_all: bool, max_matches: in
                     time.sleep(0.05)
                 if ok and settled:
                     done_days.add(day.isoformat())
+                else:
+                    all_done = False
             for month, recs in by_month.items():
                 path = folder / slug / f"{month}.jsonl.gz"
                 path.parent.mkdir(parents=True, exist_ok=True)
@@ -609,6 +614,9 @@ def fetch_espn(out: Path, seasons: list[int], refresh_all: bool, max_matches: in
             if days:
                 done_path.parent.mkdir(parents=True, exist_ok=True)
                 done_path.write_text(json.dumps(sorted(done_days)))
+            if all_done and not season_is_live(season):
+                complete.parent.mkdir(parents=True, exist_ok=True)
+                complete.write_text("")
             n = sum(len(v) for v in by_month.values())
             if by_month:
                 log(f"espn {slug} {season}: {len(days)} match days, {n} matches in "
