@@ -343,6 +343,23 @@ def _espn_records() -> tuple[pd.DataFrame, pd.DataFrame]:
     return pdf, tdf
 
 
+def espn_upcoming() -> pd.DataFrame:
+    """Cup and European fixtures in the next ten days (as of the last download)."""
+    path = data_dir() / "espn" / "upcoming.json"
+    rows = []
+    for ev in json.loads(path.read_text()) if path.exists() else []:
+        for t in ev["teams"]:
+            opp = next((o["name"] for o in ev["teams"] if o is not t), None)
+            rows.append({"league": ev["league"], "date": ev["date"],
+                         "team": names.team(t["name"]) if t["name"] else None,
+                         "opp": names.team(opp) if opp else None, "side": t["side"]})
+    df = pd.DataFrame(rows, columns=["league", "date", "team", "opp", "side"])
+    df["date"] = pd.to_datetime(df["date"], utc=True).dt.tz_convert("Europe/London") \
+        .dt.tz_localize(None)
+    df["competition"] = df["league"].map(ESPN_COMP_NAMES)
+    return df.sort_values("date").reset_index(drop=True)
+
+
 def espn_players() -> pd.DataFrame:
     return _espn_records()[0].copy()
 

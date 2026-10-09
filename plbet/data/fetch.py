@@ -595,6 +595,29 @@ def fetch_espn(out: Path, seasons: list[int], refresh_all: bool, max_matches: in
             if by_month:
                 log(f"espn {slug} {season}: {len(days)} match days, {n} matches in "
                     f"{len(by_month)} months touched")
+    # Cup and European fixtures in the next ten days: a big game midweek
+    # means rotation at the weekend.
+    upcoming = []
+    for slug in ESPN_CLUB:
+        if slug in comps_failed:
+            continue
+        for i in range(11):
+            day = today + dt.timedelta(days=i)
+            try:
+                r = get(s, f"{ESPN_BASE}/{slug}/scoreboard?dates={day:%Y%m%d}")
+                r.raise_for_status()
+            except Exception as exc:
+                failures.append(f"{slug} upcoming {day}: {exc}")
+                break
+            for ev in r.json().get("events", []):
+                comp = (ev.get("competitions") or [{}])[0]
+                upcoming.append({
+                    "league": slug, "event": str(ev.get("id")), "date": ev.get("date"),
+                    "teams": [{"name": (c.get("team") or {}).get("displayName"),
+                               "side": c.get("homeAway")} for c in comp.get("competitors", [])],
+                })
+    folder.mkdir(parents=True, exist_ok=True)
+    (folder / "upcoming.json").write_text(json.dumps(upcoming, ensure_ascii=False))
     log(f"espn: {fetched} matches fetched, {len(failures)} failures, "
         f"competitions failed: {comps_failed}")
     if fetched == 0 and len(comps_failed) == len(ESPN_CLUB + ESPN_INTERNATIONAL):
