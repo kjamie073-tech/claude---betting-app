@@ -40,11 +40,11 @@
     },
     "espn": {
       "ok": true,
-      "updated_at": "2026-10-09T22:28:38+00:00",
-      "matches_fetched": 305,
+      "updated_at": "2026-10-09T22:31:59+00:00",
+      "matches_fetched": 6406,
       "failures": [],
       "competitions_failed": {}
     }
   },
-  "updated_at": "2026-10-09T22:30:25+00:00"
+  "updated_at": "2026-10-09T23:52:08+00:00"
 }
