@@ -121,12 +121,18 @@ builders' prices multiplied), at a **fixed £5 stake** per acca. When J asks for
    report) and run again, or pass the whole acca price with `--odds`. The
    report then gives the edge and expected profit on £5, and names any
    builder priced below fair that drags the acca down.
-5. Be plain about what an acca is: chances multiply, so does bookmaker margin
-   (a 10-fold of ~45% builders is about 1 in 2,000). If the acca's edge is
-   below 8%, say the staking plan would not back it, and suggest the shorter
-   acca without the negative-edge builders. J's stake is fixed at £5; don't
-   size it up.
-6. Log it as one row: `tracker add ... --type Acca --market Acca --stake 5
+5. **Ask J about this week's offers** (free bet builders, acca boosts, acca
+   insurance) and price them in: `--boost 0.25`, `--insurance`, `--free-bet`.
+   Offers are the most dependable edge J has (docs/STAKING.md section 7).
+   Use a free bet on the builder with the highest chance × (odds − 1).
+6. Be plain about what an acca is: chances multiply, so does bookmaker margin
+   (a 10-fold of ~45% builders is about 1 in 2,000; at a typical 20% builder
+   margin a 10-fold returns about 11p per £1 on average). If the acca's edge
+   is below 8%, say the staking plan would not back it, and recommend the
+   shorter acca without the negative-edge builders. J's goal is to win money,
+   so recommend the bet with the best expected return even when it is not
+   the 10-game acca, and say why. J's stake is fixed at £5; don't size it up.
+7. Log it as one row: `tracker add ... --type Acca --market Acca --stake 5
    --odds <acca odds> --chance <acca chance> --match "GW N acca (10 games)"
    --selection "<match: legs | match: legs ...>"`.
 

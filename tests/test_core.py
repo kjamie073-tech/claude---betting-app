@@ -306,3 +306,17 @@ def test_espn_compact_minutes_from_subs_and_red_cards():
     assert mins == {"a": 80.0, "b": 65.0, "c": 25.0}      # unused sub d left out
     assert rec["players"][0]["shots"] == 2.0
     assert rec["teams"][0]["corners"] == 6.0 and rec["teams"][0]["score"] == 2.0
+
+
+def test_acca_offers():
+    from plbet.acca import AccaLeg, Promo, combine
+    legs = [AccaLeg(f"M{i}", None, ["x"], ["x"], 0.5, 0.001, odds=1.8) for i in range(3)]
+    plain = combine(legs)
+    assert plain.ev == pytest.approx(0.125 * 1.8 ** 3 - 1)
+    boosted = combine(legs, promo=Promo(boost=0.5))
+    assert boosted.paid_odds == pytest.approx(1 + (1.8 ** 3 - 1) * 1.5)
+    ins = combine(legs, promo=Promo(insurance=True))
+    assert ins.p_one_miss == pytest.approx(3 * 0.5 ** 3)
+    assert ins.promo_ev == pytest.approx(plain.ev + 0.375 * 0.7)
+    free = combine(legs, promo=Promo(free_bet=True))
+    assert free.promo_ev == pytest.approx(0.125 * (1.8 ** 3 - 1))

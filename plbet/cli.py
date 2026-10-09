@@ -113,6 +113,8 @@ def main(argv: list[str] | None = None) -> int:
     b.add_argument("match")
     b.add_argument("--legs", nargs="+", required=True)
     b.add_argument("--odds")
+    b.add_argument("--free-bet", action="store_true",
+                   help="value it as a free bet (stake not returned)")
     ac = sub.add_parser("acca")
     ac.add_argument("match", nargs="*")
     ac.add_argument("--gameweek", type=int)
@@ -120,6 +122,11 @@ def main(argv: list[str] | None = None) -> int:
                     help="folder of match files used for --gameweek fixtures")
     ac.add_argument("--odds", help="the bookmaker's price for the whole acca")
     ac.add_argument("--stake", type=float, default=5.0)
+    ac.add_argument("--boost", type=float, default=0.0,
+                    help="winnings boost on the acca, e.g. 0.25 for 25%%")
+    ac.add_argument("--insurance", action="store_true",
+                    help="stake back as a free bet if exactly one builder loses")
+    ac.add_argument("--free-bet", action="store_true", help="the stake is a free bet")
     ac.add_argument("--legs", type=int, default=3, help="legs per suggested builder")
     ac.add_argument("--min-p", type=float, default=0.30)
     ac.add_argument("--max-p", type=float, default=0.80)
@@ -232,6 +239,9 @@ def main(argv: list[str] | None = None) -> int:
         print(f"model chance {rep.joint:.2%} (independent {rep.independent:.2%}, link x{rep.lift:.2f}); "
               f"fair odds {rep.fair_odds:.2f}")
         print(rep.verdict())
+        if args.free_bet and rep.odds:
+            print(f"As a free bet: expected return {rep.joint * (rep.odds - 1):.2f} per pound of "
+                  f"free bet (higher is better; compare builders on this number).")
         for fl in rep.flags:
             print("-", fl)
         print(rep.pairs.round(3).to_string(index=False))
@@ -323,7 +333,8 @@ def _acca(args) -> int:
                            f"{args.min_p:.0%}-{args.max_p:.0%} range")
         else:
             legs.append(leg)
-    rep = acca.combine(legs, stake=args.stake, acca_odds=args.odds)
+    promo = acca.Promo(boost=args.boost, insurance=args.insurance, free_bet=args.free_bet)
+    rep = acca.combine(legs, stake=args.stake, acca_odds=args.odds, promo=promo)
     print(acca.render(rep, skipped, args.out))
     return 0
 

@@ -36,6 +36,9 @@ MIN_EDGE_ACCA = builder.MIN_EDGE_BUILDER
 ACCA_LEGS = (3,)
 ACCA_MIN_P = 0.30
 ACCA_MAX_P = 0.80
+# A free bet (stake not returned) converts to roughly this much cash when
+# used sensibly (on a selection at evens to 4.0), for valuing acca insurance.
+FREE_BET_VALUE = 0.7
 # Gap between model-only and bookmaker expected goals that usually means news
 # the model lacks (CLAUDE.md, sanity checks).
 GOALS_GAP = 0.3
@@ -63,6 +66,32 @@ class AccaLeg:
 
 
 @dataclass
+class Promo:
+    """Bookmaker offers on the acca.
+
+    boost: extra share of the winnings (0.25 = a 25% profit boost).
+    insurance: stake back as a free bet if exactly one builder loses.
+    free_bet: the stake is a free bet (winnings paid, stake not returned).
+    """
+    boost: float = 0.0
+    insurance: bool = False
+    free_bet: bool = False
+
+    def __bool__(self) -> bool:
+        return bool(self.boost or self.insurance or self.free_bet)
+
+    def describe(self) -> str:
+        parts = []
+        if self.boost:
+            parts.append(f"{self.boost:.0%} winnings boost")
+        if self.insurance:
+            parts.append("money back as a free bet if one builder lets you down")
+        if self.free_bet:
+            parts.append("free bet stake")
+        return ", ".join(parts)
+
+
+@dataclass
 class AccaReport:
     legs: list[AccaLeg]
     prob: float
@@ -71,6 +100,28 @@ class AccaReport:
     stake: float
     odds_source: str
     notes: list[str] = field(default_factory=list)
+    promo: Promo = field(default_factory=Promo)
+    p_one_miss: float = 0.0
+
+    @property
+    def paid_odds(self) -> float | None:
+        """Odds after any winnings boost."""
+        if self.odds is None:
+            return None
+        return 1 + (self.odds - 1) * (1 + self.promo.boost)
+
+    @property
+    def promo_ev(self) -> float | None:
+        """Expected profit per pound staked, counting the offers."""
+        if self.odds is None:
+            return None
+        if self.promo.free_bet:
+            ev = self.prob * (self.paid_odds - 1)
+        else:
+            ev = self.prob * self.paid_odds - 1
+        if self.promo.insurance:
+            ev += self.p_one_miss * FREE_BET_VALUE
+        return ev
 
     @property
     def fair_odds(self) -> float:
@@ -85,6 +136,18 @@ class AccaReport:
         return self.prob * self.odds - 1 if self.odds else None
 
     def verdict(self) -> str:
+        if self.promo and self.odds is not None:
+            pe = self.promo_ev
+            base = (f"with the offers ({self.promo.describe()}) the expected return is "
+                    f"{pe:+.1%} of the stake (without them {self.ev:+.1%})")
+            if self.promo.free_bet:
+                return (f"Free bet: {base}. A free bet is always worth using; this "
+                        f"combination is the one to compare against others' expected return.")
+            if pe >= MIN_EDGE_ACCA:
+                return f"Value thanks to the offers: {base}."
+            if pe > 0:
+                return f"Marginal: {base}, below the {MIN_EDGE_ACCA:.0%} minimum."
+            return f"No value even with the offers: {base}."
         if self.odds is None:
             return (f"Fair odds {self.fair_odds:.2f}. Only worth backing at {self.min_odds:.2f} or "
                     f"bigger (the staking plan's {MIN_EDGE_ACCA:.0%} minimum edge for builders).")
@@ -98,7 +161,7 @@ class AccaReport:
 
 
 def combine(legs: list[AccaLeg], stake: float = DEFAULT_STAKE,
-            acca_odds=None) -> AccaReport:
+            acca_odds=None, promo: Promo | None = None) -> AccaReport:
     """Price an acca from one builder per match (matches independent).
 
     ``acca_odds``: the price the bookmaker shows for the whole acca. Without
@@ -116,7 +179,10 @@ def combine(legs: list[AccaLeg], stake: float = DEFAULT_STAKE,
         o, src = float(np.prod([l.odds for l in legs])), "builder prices multiplied"
     else:
         o, src = None, "not priced"
-    rep = AccaReport(legs=legs, prob=prob, se=prob * rel, odds=o, stake=stake, odds_source=src)
+    ps = [l.prob for l in legs]
+    p_one_miss = float(sum((1 - ps[i]) * np.prod(ps[:i] + ps[i + 1:]) for i in range(len(ps))))
+    rep = AccaReport(legs=legs, prob=prob, se=prob * rel, odds=o, stake=stake, odds_source=src,
+                     promo=promo or Promo(), p_one_miss=p_one_miss)
     if acca_odds is not None and all(l.odds for l in legs):
         product = float(np.prod([l.odds for l in legs]))
         if abs(o / product - 1) > 0.02:
@@ -212,6 +278,11 @@ def render(rep: AccaReport, skipped: list[str] | None = None,
         lines.append(f"- **Odds:** {rep.odds:,.2f} ({rep.odds_source}); £{rep.stake:.2f} returns "
                      f"£{ret:,.2f} if it wins.")
         sign = "-" if exp < 0 else "+"
+        if rep.promo:
+            pexp = rep.stake * rep.promo_ev
+            lines.append(f"- **Offers:** {rep.promo.describe()}. Paid odds {rep.paid_odds:,.2f}; "
+                         f"chance exactly one builder fails {rep.p_one_miss:.1%}. Expected "
+                         f"profit with the offers: {'-' if pexp < 0 else '+'}£{abs(pexp):.2f}.")
         lines.append(f"- **Expected profit at £{rep.stake:.2f}:** {sign}£{abs(exp):.2f} per bet "
                      f"(edge {rep.ev:+.1%}).")
     lines.append(f"- **Verdict:** {rep.verdict()}\n")
