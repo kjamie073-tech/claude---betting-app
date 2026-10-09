@@ -124,6 +124,8 @@ class AnalysisResult:
     stats_model: MatchStatsModel
     # side -> (recent games in all competitions, workload notes)
     workload: dict[str, tuple[list[str], list[str]]] = field(default_factory=dict)
+    # Players kept out of suggested builder legs (little data, or doubtful).
+    leg_exclude: list[str] = field(default_factory=list)
 
 
 # ------------------------------------------------------------------ helpers
@@ -503,8 +505,16 @@ def analyse(spec: MatchSpec, as_of: pd.Timestamp | None = None, seed: int = 7,
             notes.append(f"{', '.join(low)}: under {LOW_DATA_MINUTES} Premier League minutes in "
                          f"the last three seasons, so their player chances lean on averages for "
                          f"their position; left out of the suggested legs.")
-    legs = builder.strong_legs(cat, exclude_players=low) if catalogue else pd.DataFrame()
-    sugg = builder.suggest(sim, cat, exclude_players=low) if catalogue else pd.DataFrame()
+    # Doubtful starters (FPL chance of playing under 100%): a leg on a player
+    # who is benched or managed loses, and sinks an acca with it.
+    doubts = [p for sq in squads.values()
+              for p in sq.loc[sq["start"] & (sq["avail"] < 0.99), "player"]]
+    if doubts:
+        notes.append(f"{', '.join(doubts)}: doubtful (FPL chance of playing under 100%); "
+                     f"left out of the suggested legs.")
+    leg_exclude = low + doubts
+    legs = builder.strong_legs(cat, exclude_players=leg_exclude) if catalogue else pd.DataFrame()
+    sugg = builder.suggest(sim, cat, exclude_players=leg_exclude) if catalogue else pd.DataFrame()
 
     wl = {}
     for side, team in (("h", home), ("a", away)):
@@ -519,5 +529,5 @@ def analyse(spec: MatchSpec, as_of: pd.Timestamp | None = None, seed: int = 7,
         sim=sim, catalogue=cat, player_table=ptab, squads=squads, news=news,
         lineup_shift=shift, builders=reports,
         strong_legs=legs, suggestions=sugg, expected=exp, referee=referee, notes=notes,
-        goals_model=gm, stats_model=sm, workload=wl,
+        goals_model=gm, stats_model=sm, workload=wl, leg_exclude=leg_exclude,
     )
