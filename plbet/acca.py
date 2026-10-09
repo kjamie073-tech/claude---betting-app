@@ -250,7 +250,7 @@ def pick_builder(res: AnalysisResult, n_legs=ACCA_LEGS, min_p: float = ACCA_MIN_
                        prob=b.joint, se=b.joint_se, odds=b.odds, source="your builder",
                        flags=flags + b.flags)
     sugg = builder.suggest(res.sim, res.catalogue, n_legs=n_legs, top=1, min_p=min_p,
-                           max_p=max_p, exclude_players=_low_data_players(res))
+                           max_p=max_p, exclude_players=res.leg_exclude or _low_data_players(res))
     if sugg.empty:
         return None
     legs = list(sugg["legs"].iat[0])
