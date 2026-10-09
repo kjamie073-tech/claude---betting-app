@@ -82,6 +82,36 @@ Private files live in the project's shared folder, never in this public repo:
    If nothing clears the minimum edge, say "no bet" plainly. That is a
    correct and common answer.
 
+## J's usual bet: a bet builder acca
+
+J's normal bet is **one bet builder on every Premier League game of the round,
+all stacked into one accumulator** (Paddy Power: the acca price is the
+builders' prices multiplied), at a **fixed £5 stake** per acca. When J asks for
+"a bet builder for all the games":
+
+1. Do steps 1–3 above for each fixture (team news matters more here: one
+   wrong line-up sinks the whole acca). Match files go in the matches folder.
+2. `python -m plbet acca --gameweek N --matches /mnt/project-files/betting/matches --out /mnt/project-files/betting/reports`
+   picks a 3-leg builder per match (model chance 30–80%; change with
+   `--legs`, `--min-p`, `--max-p`), writes each match report and an
+   `<date>-acca.md` summary. Fixtures without a match file use the model
+   alone and are flagged. Specific files can be passed instead of `--gameweek`.
+3. Give J the builders (legs as they read in the bookmaker's builder), each
+   one's model chance and fair odds, and the acca's chance and fair odds.
+4. When J pastes the bookmaker's builder prices, put each in its match file
+   (`builders: [{legs: [...], odds: X}]`, the specs are listed in the acca
+   report) and run again, or pass the whole acca price with `--odds`. The
+   report then gives the edge and expected profit on £5, and names any
+   builder priced below fair that drags the acca down.
+5. Be plain about what an acca is: chances multiply, so does bookmaker margin
+   (a 10-fold of ~45% builders is about 1 in 2,000). If the acca's edge is
+   below 8%, say the staking plan would not back it, and suggest the shorter
+   acca without the negative-edge builders. J's stake is fixed at £5; don't
+   size it up.
+6. Log it as one row: `tracker add ... --type Acca --market Acca --stake 5
+   --odds <acca odds> --chance <acca chance> --match "GW N acca (10 games)"
+   --selection "<match: legs | match: legs ...>"`.
+
 ## Things to be honest about
 
 docs/BACKTEST.md has the evidence; the points that matter when replying:
@@ -134,6 +164,7 @@ and report ROI with `tracker summary <path>`.
 - `plbet/models/simulate.py` — the joint Monte Carlo simulator
 - `plbet/markets.py` — market specs evaluated on simulations
 - `plbet/builder.py` — builder pricing, leg relationships, suggestions
+- `plbet/acca.py` — one builder per match stacked into an acca
 - `plbet/analysis.py` — puts it all together for one match
 - `plbet/report.py`, `plbet/team_stats.py` — the markdown report
 - `plbet/staking.py`, `plbet/tracker.py` — staking plan and Excel tracker

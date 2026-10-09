@@ -265,3 +265,18 @@ def test_yellow_cards_go_to_different_players():
     assert (out.sum(axis=1) == np.minimum(counts, 6)).all()
     # the most card-prone player is booked most often
     assert out[:, 0].mean() > out[:, 1].mean() > out[:, 5].mean()
+
+
+def test_acca_multiplies_builders_and_flags_bad_legs():
+    from plbet.acca import AccaLeg, combine
+    legs = [AccaLeg("A v B", None, ["x"], ["x"], 0.5, 0.001, odds=2.2),
+            AccaLeg("C v D", None, ["y"], ["y"], 0.4, 0.001, odds=2.0)]
+    rep = combine(legs, stake=5)
+    assert rep.prob == pytest.approx(0.2)
+    assert rep.odds == pytest.approx(4.4)
+    assert rep.ev == pytest.approx(0.2 * 4.4 - 1)
+    assert rep.min_odds == pytest.approx(5 * 1.08)
+    assert any("C v D" in n for n in rep.notes)  # priced below fair: flagged
+    assert combine(legs, acca_odds="9/2").odds == pytest.approx(5.5)
+    unpriced = combine([AccaLeg("A v B", None, ["x"], ["x"], 0.5, 0.001)])
+    assert unpriced.odds is None and unpriced.ev is None

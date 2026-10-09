@@ -25,8 +25,8 @@ from openpyxl.workbook.defined_name import DefinedName
 from openpyxl.worksheet.datavalidation import DataValidation
 
 MAX_ROWS = 2000
-BET_TYPES = ["Single", "Player", "Builder"]
-MARKETS = ["Result", "Goals", "BTTS", "Corners", "Cards", "Shots", "Player", "Builder", "Other"]
+BET_TYPES = ["Single", "Player", "Builder", "Acca"]
+MARKETS = ["Result", "Goals", "BTTS", "Corners", "Cards", "Shots", "Player", "Builder", "Acca", "Other"]
 RESULTS = ["Pending", "Won", "Lost", "Void", "Cash out"]
 
 # Bets sheet columns: (header, width)
