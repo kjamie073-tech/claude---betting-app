@@ -1,0 +1,43 @@
+{
+  "sources": {
+    "football-data": {
+      "ok": true,
+      "updated_at": "2026-10-09T18:31:58+00:00",
+      "written": [
+        "E0_1920.csv",
+        "E0_2021.csv",
+        "E0_2122.csv",
+        "E0_2223.csv",
+        "E0_2324.csv",
+        "E0_2425.csv",
+        "E0_2526.csv",
+        "E0_2627.csv",
+        "E1_1920.csv",
+        "E1_2021.csv",
+        "E1_2122.csv",
+        "E1_2223.csv",
+        "E1_2324.csv",
+        "E1_2425.csv",
+        "E1_2526.csv",
+        "E1_2627.csv",
+        "fixtures.csv"
+      ],
+      "missing": []
+    },
+    "understat": {
+      "ok": true,
+      "updated_at": "2026-10-09T18:32:13+00:00",
+      "matches_fetched": 50,
+      "failures": []
+    },
+    "fpl": {
+      "ok": true,
+      "updated_at": "2026-10-09T18:32:57+00:00",
+      "season": 2026,
+      "players": 667,
+      "history_rows": 2054,
+      "failures": []
+    }
+  },
+  "updated_at": "2026-10-09T18:34:10+00:00"
+}
