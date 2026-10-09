@@ -51,6 +51,13 @@ Private files live in the project's shared folder, never in this public repo:
      country say little about league form;
    - anything else that changes the game: a manager change, rotation, weather.
    Note each source; mention conflicts between sources in the report notes.
+   **SofaScore** is J's preferred fallback for match information. The sandbox
+   cannot open sofascore.com, so the data workflow downloads it: run
+   `update-data.yml` with `{"only": "sofascore"}` and read
+   `data/sofascore/lineups.json` after `sync` (predicted XIs, then the
+   confirmed XIs about an hour before kick-off with `confirmed: true`,
+   missing players with reasons, referees). Prefer it over stale previews,
+   and use confirmed XIs in the match file when they are out.
 3. **Write the match file.** `python -m plbet template HOME AWAY --out /mnt/project-files/betting/matches`
    then fill in kick-off, referee, the predicted XIs, anyone ruled out who is
    not already in FPL's injury news, and J's odds. Map each pasted price to a
