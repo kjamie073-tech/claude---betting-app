@@ -419,6 +419,32 @@ def _months(season: int, today: dt.date) -> list[tuple[dt.date, dt.date]]:
     return out
 
 
+_ESPN_QUERY: list[str] = []
+
+
+def _espn_events(s: requests.Session, slug: str, first: dt.date, last: dt.date) -> list[dict]:
+    """Finished and scheduled events of one competition between two dates.
+
+    The scoreboard's accepted query shapes vary, so try a few and remember
+    the first one that works.
+    """
+    shapes = _ESPN_QUERY or ["dates={a}-{b}&limit=500", "dates={a}-{b}", "dates={a}{b6}"]
+    errors = []
+    for q in shapes:
+        url = (f"{ESPN_BASE}/{slug}/scoreboard?"
+               + q.format(a=f"{first:%Y%m%d}", b=f"{last:%Y%m%d}", b6=""))
+        r = get(s, url)
+        if r.status_code == 200:
+            if not _ESPN_QUERY:
+                _ESPN_QUERY.append(q)
+                log(f"espn: scoreboard query shape '{q}' works")
+            return r.json().get("events", [])
+        errors.append(f"{q} -> {r.status_code} {r.text[:200]!r}")
+    if len(errors) > 1:
+        log(f"espn {slug} {first}: " + " | ".join(errors))
+    raise requests.HTTPError(errors[-1])
+
+
 def fetch_espn(out: Path, seasons: list[int], refresh_all: bool, max_matches: int) -> dict[str, Any]:
     """Line-ups and player stats from cup, European and international games.
 
@@ -444,11 +470,7 @@ def fetch_espn(out: Path, seasons: list[int], refresh_all: bool, max_matches: in
                 if path.exists() and settled and not refresh_all:
                     continue
                 try:
-                    r = get(s, f"{ESPN_BASE}/{slug}/scoreboard?dates={first:%Y%m%d}-"
-                               f"{last:%Y%m%d}&limit=1000")
-                    if r.status_code != 200:
-                        raise requests.HTTPError(f"HTTP {r.status_code}")
-                    events = r.json().get("events", [])
+                    events = _espn_events(s, slug, first, last)
                 except Exception as exc:
                     leagues_failed[slug] = f"{type(exc).__name__}: {exc}"[:200]
                     break
