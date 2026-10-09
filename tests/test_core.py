@@ -280,3 +280,29 @@ def test_acca_multiplies_builders_and_flags_bad_legs():
     assert combine(legs, acca_odds="9/2").odds == pytest.approx(5.5)
     unpriced = combine([AccaLeg("A v B", None, ["x"], ["x"], 0.5, 0.001)])
     assert unpriced.odds is None and unpriced.ev is None
+
+
+def test_espn_compact_minutes_from_subs_and_red_cards():
+    from plbet.data.fetch import espn_compact
+    pl = lambda i, starter, sub=False: {"athlete": {"id": i, "displayName": f"P{i}"},
+                                        "starter": starter, "subbedIn": sub,
+                                        "stats": [{"name": "totalShots", "value": 2.0}]}
+    sm = {
+        "header": {"competitions": [{"date": "2026-09-30T19:00Z", "competitors": [
+            {"homeAway": "home", "score": "2", "team": {"id": "1", "displayName": "Arsenal"}},
+            {"homeAway": "away", "score": "1", "team": {"id": "2", "displayName": "Ajax"}}]}]},
+        "rosters": [{"team": {"id": "1"}, "roster": [pl("a", True), pl("b", True), pl("c", False, True),
+                                                     pl("d", False)]}],
+        "keyEvents": [
+            {"type": {"type": "substitution"}, "clock": {"value": 3900.0}, "period": {"number": 2},
+             "participants": [{"athlete": {"id": "c"}}, {"athlete": {"id": "b"}}]},
+            {"type": {"type": "red-card"}, "clock": {"value": 4800.0}, "period": {"number": 2},
+             "participants": [{"athlete": {"id": "a"}}]}],
+        "boxscore": {"teams": [{"team": {"id": "1"},
+                                "statistics": [{"name": "wonCorners", "displayValue": "6"}]}]},
+    }
+    rec = espn_compact("uefa.champions", {"id": 9, "name": "x"}, sm)
+    mins = {p["id"]: p["minutes"] for p in rec["players"]}
+    assert mins == {"a": 80.0, "b": 65.0, "c": 25.0}      # unused sub d left out
+    assert rec["players"][0]["shots"] == 2.0
+    assert rec["teams"][0]["corners"] == 6.0 and rec["teams"][0]["score"] == 2.0

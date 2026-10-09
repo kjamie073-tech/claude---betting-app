@@ -174,6 +174,9 @@ def pick_builder(res: AnalysisResult, n_legs=ACCA_LEGS, min_p: float = ACCA_MIN_
     else:
         flags.append("no 1X2 odds in the match file, so goals are the model's alone")
     flags += [n for n in res.notes if "no Premier League history" in n]
+    for side in ("h", "a"):
+        flags += [n for n in res.workload.get(side, ([], []))[1]
+                  if "long-haul" in n or "last played" in n or "unavailable" in n]
     if res.builders:
         priced = [b for b in res.builders if b.odds]
         b = max(priced, key=lambda b: b.ev) if priced else res.builders[0]

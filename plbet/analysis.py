@@ -22,7 +22,7 @@ import numpy as np
 import pandas as pd
 import yaml
 
-from . import builder, markets, odds as odds_mod
+from . import builder, markets, odds as odds_mod, workload
 from .data import load, names
 from .models import features, players
 from .models.counts import MatchStatsModel
@@ -122,6 +122,8 @@ class AnalysisResult:
     notes: list[str]
     goals_model: GoalsModel
     stats_model: MatchStatsModel
+    # side -> (recent games in all competitions, workload notes)
+    workload: dict[str, tuple[list[str], list[str]]] = field(default_factory=dict)
 
 
 # ------------------------------------------------------------------ helpers
@@ -504,11 +506,18 @@ def analyse(spec: MatchSpec, as_of: pd.Timestamp | None = None, seed: int = 7,
     legs = builder.strong_legs(cat, exclude_players=low) if catalogue else pd.DataFrame()
     sugg = builder.suggest(sim, cat, exclude_players=low) if catalogue else pd.DataFrame()
 
+    wl = {}
+    for side, team in (("h", home), ("a", away)):
+        try:
+            wl[side] = workload.describe(team, squads[side], kickoff)
+        except Exception as exc:  # missing or odd ESPN data must not stop a report
+            wl[side] = ([], [f"Workload for {team} unavailable: {type(exc).__name__}: {exc}"])
+
     return AnalysisResult(
         spec=spec, home=home, away=away, as_of=as_of,
         lambdas_model=(lh_m, la_m), lambdas_market=lam_mkt, lambdas=(lh, la), rho=gm.rho_,
         sim=sim, catalogue=cat, player_table=ptab, squads=squads, news=news,
         lineup_shift=shift, builders=reports,
         strong_legs=legs, suggestions=sugg, expected=exp, referee=referee, notes=notes,
-        goals_model=gm, stats_model=sm,
+        goals_model=gm, stats_model=sm, workload=wl,
     )
