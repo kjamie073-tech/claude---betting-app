@@ -1,0 +1,93 @@
+name: Update data
+
+# Downloads results, match stats, xG, player stats and availability news and
+# commits them to the `data` branch. Analysis sessions read that branch, so the
+# model always works from the same numbers.
+
+on:
+  schedule:
+    - cron: "20 5 * * *"        # every morning
+    - cron: "20 16 * * 4,5"     # Thu/Fri evening, after pre-match press conferences
+  workflow_dispatch:
+    inputs:
+      first_season:
+        description: "Earliest season (start year) to download"
+        default: "2019"
+      backfill_from:
+        description: "Earliest season to fetch Understat match detail for"
+        default: "2019"
+      max_matches:
+        description: "Cap on Understat match pages this run"
+        default: "4000"
+      refresh_all:
+        description: "Re-download finished seasons too (true/false)"
+        default: "false"
+      only:
+        description: "Limit to sources (space separated: football-data understat fpl)"
+        default: ""
+
+permissions:
+  contents: write
+
+concurrency:
+  group: update-data
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 150
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: src
+
+      - name: Check out the data branch
+        env:
+          TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          url="https://x-access-token:${TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          if git ls-remote --exit-code --heads "$url" data >/dev/null 2>&1; then
+            git clone --depth 1 --branch data "$url" store
+          else
+            mkdir store && cd store && git init -b data && git remote add origin "$url"
+          fi
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install
+        run: pip install requests pandas
+
+      - name: Fetch
+        working-directory: src
+        env:
+          FIRST_SEASON: ${{ inputs.first_season }}
+          BACKFILL_FROM: ${{ inputs.backfill_from }}
+          MAX_MATCHES: ${{ inputs.max_matches }}
+          REFRESH_ALL: ${{ inputs.refresh_all }}
+          ONLY: ${{ inputs.only }}
+        run: |
+          args=(--out ../store
+                --first-season "${FIRST_SEASON:-2019}"
+                --backfill-from "${BACKFILL_FROM:-2019}"
+                --max-matches "${MAX_MATCHES:-4000}")
+          if [ "${REFRESH_ALL}" = "true" ]; then args+=(--refresh-all); fi
+          if [ -n "${ONLY}" ]; then args+=(--only ${ONLY}); fi
+          python -m plbet.data.fetch "${args[@]}"
+
+      - name: Commit and push
+        if: always()
+        working-directory: store
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "No data changes"
+            exit 0
+          fi
+          git commit -q -m "Data update $(date -u +%Y-%m-%dT%H:%MZ)"
+          git push origin data
+          cat status.json

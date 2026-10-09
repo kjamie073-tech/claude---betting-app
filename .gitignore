@@ -1,0 +1,11 @@
+__pycache__/
+*.pyc
+.pytest_cache/
+.venv/
+# Local data checkout (the data lives on the `data` branch)
+/data/
+# Personal betting records never go in this public repo
+*tracker*.xlsx
+!tracker/bet_tracker_template.xlsx
+/reports/
+/matches/
