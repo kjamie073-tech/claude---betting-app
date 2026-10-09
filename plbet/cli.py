@@ -49,6 +49,11 @@ bench:
 absent:
   home: []
   away: []
+# Expected minutes if starting, for players likely to come off early (heavy
+# midweek minutes, back late from international duty, short of fitness).
+minutes:
+  home: {{}}               # e.g. {{"Bukayo Saka": 65}}
+  away: {{}}
 
 # Bookmaker odds you can see (decimal 2.5, fractional 6/4, or evs). The 1X2
 # and over/under 2.5 prices are used to anchor the model; the rest are

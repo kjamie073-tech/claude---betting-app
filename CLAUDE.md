@@ -39,8 +39,17 @@ Private files live in the project's shared folder, never in this public repo:
      of kick-off;
    - the referee (the Premier League announces appointments early in the
      week);
-   - anything else that changes the game: a manager change, a cup game
-     midweek, rotation, weather.
+   - **every competition, not just the league**: each team's last game and
+     next one (Champions/Europa/Conference League, FA Cup, EFL Cup), how many
+     days' rest, how much they rotated and who played 90. A side 3 days after
+     a European away game rotates more and its regulars play fewer minutes;
+     a big game straight after the weekend can mean rest *this* weekend;
+   - **international duty** (after an international break): who played, how
+     many minutes, who came back injured or late (long-haul trips back from
+     South America, Africa or Asia before an early Saturday kick-off matter
+     most). Treat it as a question of minutes and fitness: goals for a
+     country say little about league form;
+   - anything else that changes the game: a manager change, rotation, weather.
    Note each source; mention conflicts between sources in the report notes.
 3. **Write the match file.** `python -m plbet template HOME AWAY --out /mnt/project-files/betting/matches`
    then fill in kick-off, referee, the predicted XIs, anyone ruled out who is
@@ -53,6 +62,11 @@ Private files live in the project's shared folder, never in this public repo:
    - "Over 10.5 corners 1.90" → `corners:over:10.5`
    - "Rice to be carded 4.0" → `player:Declan Rice:card: 4.0`
    - a builder → `builders: [{legs: [...], odds: 6.5}]`
+   When the step-2 research says a starter is likely to be rested or come off
+   early (heavy midweek minutes, a late return from international duty, just
+   back from injury), use `minutes:` in the match file (e.g.
+   `minutes: {home: {"Bukayo Saka": 65}}`, expected minutes if he starts),
+   or leave him out of the XI if he is likely to be rested.
    Always include both sides of a market when J gives them (e.g. over and
    under): the model uses the 1X2 and over/under 2.5 prices, and any total
    corners or cards line, to anchor itself to the market.
