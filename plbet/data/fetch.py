@@ -473,15 +473,15 @@ def _espn_dates(s: requests.Session, slug: str, season: int, today: dt.date) -> 
     """
     first, last = dt.date(season, 7, 1), min(today, dt.date(season + 1, 6, 30))
     days: set[dt.date] = set()
-    probe = first
-    for _ in range(4):
+    # Early July can still return the previous season's calendar; mid-October
+    # is safely inside the season.
+    probes = [min(dt.date(season, 10, 15), today), first]
+    probe = probes[0]
+    for _ in range(6):
         r = get(s, f"{ESPN_BASE}/{slug}/scoreboard?dates={probe:%Y%m%d}")
         if r.status_code != 200:
             raise requests.HTTPError(f"HTTP {r.status_code}: {r.text[:200]!r}")
         cal = []
-        if probe == first:
-            raw = [lg.get("calendar") for lg in r.json().get("leagues", []) or []]
-            log(f"espn {slug} {season} calendar: {json.dumps(raw)[:600]}")
         for lg in r.json().get("leagues", []) or []:
             for c in lg.get("calendar", []) or []:
                 # Either match days ("2026-09-16T07:00Z") or rounds with a
@@ -503,6 +503,9 @@ def _espn_dates(s: requests.Session, slug: str, season: int, today: dt.date) -> 
                 d = d0 + dt.timedelta(days=i)
                 if first <= d <= last:
                     days.add(d)
+        if len(probes) > 1:
+            probe = probes.pop()
+            continue
         later = [d for d in days if d > probe]
         # A calendar may cover one stage only; ask again after its last day.
         nxt = max(later) + dt.timedelta(days=1) if later else None
@@ -520,7 +523,8 @@ def _espn_dates(s: requests.Session, slug: str, season: int, today: dt.date) -> 
     return sorted(days)
 
 
-def fetch_espn(out: Path, seasons: list[int], refresh_all: bool, max_matches: int) -> dict[str, Any]:
+def fetch_espn(out: Path, seasons: list[int], refresh_all: bool, max_matches: int,
+               minutes: float = 80.0) -> dict[str, Any]:
     """Line-ups, minutes and stats from cup, European and international games.
 
     One gzipped JSON-lines file per competition and month
@@ -534,11 +538,17 @@ def fetch_espn(out: Path, seasons: list[int], refresh_all: bool, max_matches: in
     s = make_session()
     today = dt.date.today()
     fetched, failures, comps_failed = 0, [], {}
+    # Stop in time to commit what was fetched (the job has a time limit);
+    # the next run carries on from the days already stored.
+    deadline = time.monotonic() + minutes * 60
     for slug in ESPN_CLUB + ESPN_INTERNATIONAL:
         for season in seasons:
-            if fetched >= max_matches:
+            if fetched >= max_matches or time.monotonic() > deadline:
                 break
             done_path = folder / slug / f"days_{season}.json"
+            if done_path.exists() and not refresh_all and not season_is_live(season) \
+                    and json.loads(done_path.read_text()):
+                continue                     # finished season, already stored
             done_days = set(json.loads(done_path.read_text())) \
                 if done_path.exists() and not refresh_all else set()
             try:
@@ -548,7 +558,7 @@ def fetch_espn(out: Path, seasons: list[int], refresh_all: bool, max_matches: in
                 break
             by_month: dict[str, dict[str, dict]] = {}
             for day in days:
-                if fetched >= max_matches:
+                if fetched >= max_matches or time.monotonic() > deadline:
                     break
                 settled = day < today - dt.timedelta(days=4)
                 if day.isoformat() in done_days and settled:
@@ -626,6 +636,8 @@ def fetch_espn(out: Path, seasons: list[int], refresh_all: bool, max_matches: in
                 })
     folder.mkdir(parents=True, exist_ok=True)
     (folder / "upcoming.json").write_text(json.dumps(upcoming, ensure_ascii=False))
+    if time.monotonic() > deadline:
+        log("espn: stopped at the time limit; the next run continues")
     log(f"espn: {fetched} matches fetched, {len(failures)} failures, "
         f"competitions failed: {comps_failed}")
     if fetched == 0 and len(comps_failed) == len(ESPN_CLUB + ESPN_INTERNATIONAL):
@@ -648,6 +660,8 @@ def main(argv: list[str] | None = None) -> int:
                    help="cap on Understat match pages per run")
     p.add_argument("--refresh-all", action="store_true",
                    help="re-download finished seasons too")
+    p.add_argument("--espn-minutes", type=float, default=80.0,
+                   help="time budget for the ESPN download")
     p.add_argument("--espn-from", type=int, default=2021,
                    help="earliest season to fetch ESPN other-competition games for")
     p.add_argument("--only", nargs="*", choices=["football-data", "understat", "fpl", "espn"],
@@ -673,7 +687,7 @@ def main(argv: list[str] | None = None) -> int:
                                        args.refresh_all)
             elif name == "espn":
                 info = fetch_espn(out, [y for y in seasons if y >= args.espn_from],
-                                  args.refresh_all, args.max_matches)
+                                  args.refresh_all, args.max_matches, args.espn_minutes)
             else:
                 info = fetch_fpl(out)
             status["sources"][name] = {"ok": True, "updated_at": started, **info}
