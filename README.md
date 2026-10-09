@@ -24,22 +24,30 @@ the playbook it follows.
 
 ## How good is it?
 
-The short version (details in [docs/BACKTEST.md](docs/BACKTEST.md)):
+Every prediction was tested walk-forward on past seasons (refitted using
+only earlier matches, as if used at the time), with 2025-26 and the start
+of 2026-27 held out from all tuning. Details in
+[docs/BACKTEST.md](docs/BACKTEST.md); the short version:
 
-- On match result and goals the bookmakers are very hard to beat. The model
-  on its own is close to, but slightly worse than, Bet365's prices, so when
-  you give it the 1X2 odds it leans on them.
-- Corners, cards, shots and player markets were checked for calibration
-  (when the model says 30%, does it happen about 30% of the time?) on
-  seasons it was not tuned on.
-- Bet builder chances from the joint simulation were checked against what
-  actually happened and against simply multiplying the legs' chances.
+- **Result and goals: the bookmakers are slightly better.** On its own the
+  model scored a little worse than Bet365's prices, and betting its own
+  edges at Bet365 lost about 5% over 2021-22 to 2024-25. So when you give
+  it the 1X2 and over/under odds, it leans 75% on them.
+- **Corners, cards, shots, fouls and player markets are well calibrated** on
+  the held-out seasons: when the model says 30%, it happens about 30% of
+  the time. Its most confident corner calls (80%+) were the weak spot.
+- **Bet builders are priced as a whole match, not leg by leg.** "Over 2.5
+  goals and both teams to score" happened in 45% of matches; the joint
+  simulation said 45%, multiplying the two legs' chances says 32%.
+- **Line-ups count, modestly**: each regular defender or goalkeeper the
+  other side is missing adds about 4.5% to a team's expected goals.
 
-No model makes betting a reliable way to make money. Bookmakers' margins on
-player markets and builders are large, and most bettors lose. The staking
-plan ([docs/STAKING.md](docs/STAKING.md)) is built to keep stakes small and
-only bet where the model sees a real edge; "no bet" is often the right
-answer.
+There is no free history of bookmakers' prices for props and builders, so
+nothing here shows the model beats them. No model makes betting a reliable
+way to make money: bookmakers' margins on player markets and builders are
+large, and most bettors lose. The staking plan
+([docs/STAKING.md](docs/STAKING.md)) keeps stakes small and only bets where
+the model sees a clear edge; "no bet" is often the right answer.
 
 ## Running it yourself
 
@@ -61,6 +69,7 @@ python -m plbet quick Arsenal Leeds        # model-only report, no match file
 python -m plbet builder MATCH.yaml --legs "result:home" "player:Bukayo Saka:goal" --odds 4.5
 python -m plbet stake --prob 0.30 --odds 4.0 --kind builder --bank 500
 python -m plbet ratings                    # current team ratings
+python -m plbet backtest full              # walk-forward backtest (about 20 minutes)
 python -m plbet tracker new bets.xlsx --bank 500
 python -m plbet tracker add bets.xlsx --match "Liverpool v Man City" --selection "Over 2.5" --odds 1.9 --stake 5 --chance 0.58 --type Single --market Goals
 python -m plbet tracker settle bets.xlsx --row 2 --result Won --closing 1.8

@@ -8,7 +8,7 @@ from the same numbers and nothing has to be fetched while you wait.
 
 | Source | What it gives | Used for |
 |---|---|---|
-| [football-data.co.uk](https://www.football-data.co.uk/englandm.php) (`E0`, Premier League, from 2019-20) | Results, half-time scores, shots, shots on target, corners, fouls, yellow and red cards, referee, and pre-match and closing odds from several bookmakers (Bet365, Pinnacle, market average) | Team ratings, corners/cards/fouls/shots models, referee effects, and the backtests against bookmaker prices |
+| [football-data.co.uk](https://www.football-data.co.uk/englandm.php) (`E0`, Premier League, from 2019-20) | Results, half-time scores, shots, shots on target, corners, fouls, yellow and red cards, referee, and pre-match and closing odds from several bookmakers (Bet365 and the market average; Pinnacle until partway through 2025-26) | Team ratings, corners/cards/fouls/shots models, referee effects, and the backtests against bookmaker prices |
 | [Understat](https://understat.com/league/EPL) | Team xG and non-penalty xG per match; for every player in every match: minutes, position, goals, shots, xG, assists, xA, key passes, cards; every shot with its xG and outcome | Team ratings (xG is a better guide to future goals than goals), player shares of team output, penalty takers, line-ups used in the backtests |
 | [Fantasy Premier League](https://fantasy.premierleague.com) API | Current squads, injury and suspension news with a chance of playing, set-piece takers, fixtures and kick-off times | Team news, projected line-ups, who has left a club, which gameweek a match is in |
 

@@ -71,8 +71,9 @@ Private files live in the project's shared folder, never in this public repo:
 6. **Reply to J.** Lead with the picks, then the reasoning:
    - the 2–4 strongest picks with model chance, fair odds, J's odds and edge;
    - the best builder(s): legs, model chance, fair odds, the minimum odds worth
-     taking (fair × 1.05), and how the legs relate (linked, independent, or
-     working against each other);
+     taking (fair × 1.08, the staking plan's 8% minimum edge for builders),
+     and how the legs relate (linked, independent, or working against each
+     other);
    - verdicts on any builders J asked about, including flags;
    - stakes from the staking plan (`python -m plbet stake ...`, or the
      tracker's suggested stake);
@@ -83,14 +84,33 @@ Private files live in the project's shared folder, never in this public repo:
 
 ## Things to be honest about
 
-- Main markets (result, goals) are priced efficiently: the backtest shows the
-  model alone is slightly worse than Bet365's prices, which is why it leans on
-  the bookmaker's own odds there. Value is more likely in props and in how a
-  bookmaker prices links between builder legs.
+docs/BACKTEST.md has the evidence; the points that matter when replying:
+
+- Main markets (result, goals) are priced efficiently: the model alone is
+  slightly worse than Bet365's prices (held-out 1X2 log loss 1.027 against
+  1.024 early and 1.019 at kick-off), and betting its own edges lost about 5%
+  over 2021-25. That is why it leans 75% on the bookmaker's 1X2 and
+  over/under odds. Value is more likely in props and in how a bookmaker
+  prices links between builder legs.
+- Corners, cards, shots, fouls and player markets are well calibrated on
+  held-out seasons, but nothing proves the model beats bookmakers' prop or
+  builder prices: there is no free history of those prices.
+- Be wary of very confident corner legs (80%+): on the held-out seasons they
+  came in less often than the model said.
+- Referees new to the Premier League are treated as average; in the backtest
+  they gave about 10% more yellows and fouls (small sample). Say so when the
+  referee is new.
 - Corners/cards anchors use an even model/market split that has not been
   backtested (there is no free historical corners/cards odds data).
 - Player fouls, tackles and offsides are not modelled.
+- Football-data.co.uk has no Pinnacle odds after part of 2025-26; Bet365's
+  closing prices and the market-average closing prices are the sharp
+  reference now.
 - Results over a few dozen bets are mostly luck (docs/STAKING.md section 5).
+
+After changing anything in the model, run `python -m plbet backtest full`
+(about 20 minutes) and `python -m plbet backtest goals`, and compare with
+docs/BACKTEST.md before trusting the change.
 
 ## Logging bets and results
 

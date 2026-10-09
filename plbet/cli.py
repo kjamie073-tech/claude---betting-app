@@ -10,6 +10,7 @@
   builder MATCH.yaml --legs .. price one bet builder
   stake --prob P --odds O      staking-plan stake for one bet
   tracker new|add|settle|summary
+  backtest full|goals          walk-forward backtests (slow; see docs/BACKTEST.md)
 """
 
 from __future__ import annotations
@@ -110,6 +111,13 @@ def main(argv: list[str] | None = None) -> int:
     s.add_argument("--odds", required=True)
     s.add_argument("--kind", choices=["single", "player", "builder"], default="single")
     s.add_argument("--bank", type=float, default=500)
+    bt = sub.add_parser("backtest")
+    bt.add_argument("kind", choices=["full", "goals"])
+    bt.add_argument("--seasons", nargs="+", type=int, default=[2022, 2023, 2024, 2025, 2026])
+    bt.add_argument("--held-out", nargs="+", type=int, default=[2025, 2026])
+    bt.add_argument("--sims", type=int, default=20000)
+    bt.add_argument("--workers", type=int, default=4)
+    bt.add_argument("--out", default="backtest")
     tk = sub.add_parser("tracker")
     tk.add_argument("action", choices=["new", "add", "settle", "summary"])
     tk.add_argument("path")
@@ -210,6 +218,27 @@ def main(argv: list[str] | None = None) -> int:
     if args.cmd == "stake":
         from .staking import StakingPlan
         print(json.dumps(StakingPlan(args.bank).stake(args.prob, args.odds, args.kind), indent=2))
+        return 0
+    if args.cmd == "backtest":
+        from . import backtest
+        from .data import load
+        from .models import features
+        from .models.goals import GoalsParams
+        out = Path(args.out)
+        out.mkdir(parents=True, exist_ok=True)
+        if args.kind == "full":
+            res = backtest.full_walk_forward(args.seasons, sims=args.sims, workers=args.workers)
+            for k, v in res.items():
+                v.to_csv(out / f"full_{k}.csv", index=False)
+            md = backtest.summarise_full(res, args.held_out)
+        else:
+            m = load.matches()
+            pred = backtest.goals_walk_forward(features.team_table(m), m, GoalsParams(),
+                                               args.seasons)
+            pred.to_csv(out / "goals.csv", index=False)
+            md = backtest.goals_vs_bookmakers(pred, m)
+        (out / f"{args.kind}_summary.md").write_text(md)
+        print(md)
         return 0
     if args.cmd == "tracker":
         from . import tracker

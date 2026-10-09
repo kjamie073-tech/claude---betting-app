@@ -136,8 +136,8 @@ def render(r: AnalysisResult, out_dir: str | Path | None = None) -> str:
             "Team"), index=True))
     lines.append("## Averages per match\n")
     comp = team_stats.comparison(home, away, as_of)
-    lines.append(_md_table(comp.map(lambda v: f"{v:.2f}" if isinstance(v, (float, np.floating)) else v),
-                           index=True))
+    lines.append(_md_table(comp.map(lambda v: f"{v:.2f}" if isinstance(v, (float, np.floating)) else v)
+                           .rename_axis("Per match"), index=True))
     lines.append("## Head-to-head (league, since 2019)\n")
     lines.append(_md_table(team_stats.head_to_head(home, away, as_of)))
     lines.append("_Head-to-head samples are small and old line-ups differ; the model gives them no "
@@ -151,7 +151,7 @@ def render(r: AnalysisResult, out_dir: str | Path | None = None) -> str:
                      f"{ref['yellows']:.2f} yellows and {ref['reds']:.2f} reds per game "
                      f"(league {lg['yellows']:.2f} / {lg['reds']:.2f}), {ref['fouls']:.1f} fouls "
                      f"(league {lg['fouls']:.1f}); over 3.5 cards in {ref['over_3.5_cards_%']:.0f}% "
-                     f"of his games.\n")
+                     f"of the games they refereed.\n")
     else:
         lines.append(f"Not known or no recent Premier League games. League average "
                      f"{lg['yellows']:.2f} yellows per game; the model averages over referees, "
@@ -169,8 +169,8 @@ def render(r: AnalysisResult, out_dir: str | Path | None = None) -> str:
     # ------------------------------------------------------------- players
     lines.append("## Players\n")
     lines.append("_Chances assume the player is in the line-up shown; bench players are "
-                 "conditional on coming on. Bookmakers usually void a player bet if he does not "
-                 "play._\n")
+                 "conditional on coming on. Bookmakers usually void a player bet if the player "
+                 "does not play._\n")
     pt = r.player_table.copy()
     if not pt.empty:
         pt = pt.sort_values(["team", "starts", "score"], ascending=[True, False, False])
@@ -216,22 +216,24 @@ def render(r: AnalysisResult, out_dir: str | Path | None = None) -> str:
             lines.append("")
     sl = r.strong_legs
     if sl is not None and not sl.empty:
-        priced_legs = (sl["basis"] == "edge").all()
         lines.append("## Strongest legs\n")
-        if priced_legs:
-            lines.append("_Legs where your odds beat the model's fair odds by at least the "
-                         "staking plan's minimum edge (3%, or 5% for player bets)._\n")
-            lines.append(_md_table(pd.DataFrame({
-                "Leg": sl["label"], "Model %": sl["prob"].map(_pct),
-                "Fair odds": sl["fair_odds"].map(_odds), "Your odds": sl["odds"].map(_odds),
-                "Edge": sl["ev"].map(lambda v: f"{v:+.0%}")})))
-        else:
-            lines.append("_No odds given, so these are the likeliest legs in each market (about "
-                         "70% lines), not necessarily value. A leg is only worth having in a "
-                         "builder if the bookmaker's own price for it is above the fair odds._\n")
-            lines.append(_md_table(pd.DataFrame({
-                "Leg": sl["label"], "Model %": sl["prob"].map(_pct),
-                "Fair odds": sl["fair_odds"].map(_odds)})))
+        n_val = int((sl["basis"] == "edge").sum())
+        if n_val:
+            lines.append(f"_The first {n_val} are legs where your odds beat the model's fair odds "
+                         f"by at least the staking plan's minimum edge (3%, or 5% for player "
+                         f"bets)._\n")
+        if n_val < len(sl):
+            lines.append("_" + ("The rest are" if n_val else "These are") +
+                         " the likeliest legs (about 70% lines) in markets you did not price, "
+                         "not necessarily value: a leg is only worth having in a builder if the "
+                         "bookmaker's own price for it is above the fair odds. Legs you priced "
+                         "are left out unless your odds clear the minimum edge._\n")
+        tab = pd.DataFrame({"Leg": sl["label"], "Model %": sl["prob"].map(_pct),
+                            "Fair odds": sl["fair_odds"].map(_odds)})
+        if n_val:
+            tab["Your odds"] = sl["odds"].map(_odds)
+            tab["Edge"] = sl["ev"].map(lambda v: "" if pd.isna(v) else f"{v:+.0%}")
+        lines.append(_md_table(tab))
     if not r.suggestions.empty:
         sg = r.suggestions
         lines.append("## Builders worth pricing up\n")
@@ -244,6 +246,8 @@ def render(r: AnalysisResult, out_dir: str | Path | None = None) -> str:
                "Fair odds": sg["fair_odds"].map(_odds),
                "Back at": (sg["fair_odds"] * (1 + builder.MIN_EDGE_BUILDER)).map(_odds),
                "Link": sg["lift"].map(lambda v: f"x{v:.2f}")}
+        if "value_legs" in sg and sg["value_legs"].fillna(0).gt(0).any():
+            tbl["Legs with an edge"] = sg["value_legs"].fillna(0).astype(int)
         if sg["singles_odds"].notna().all():
             tbl["Your singles multiplied"] = sg["singles_odds"].map(_odds)
         lines.append(_md_table(pd.DataFrame(tbl)))

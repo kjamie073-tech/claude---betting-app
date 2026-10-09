@@ -3,17 +3,17 @@
 For every player we estimate, from Understat match data with recent matches
 weighted more heavily:
 
-* share of the team's non-penalty xG while he is on the pitch (goal threat)
+* share of the team's non-penalty xG while on the pitch (goal threat)
 * share of the team's xA (assist threat)
 * share of the team's on-target and off-target non-goal shots
 * yellow and red card rates per 90 minutes
-* how often he starts, how long he plays when he starts, and how often he
-  comes off the bench
+* how often the player starts, how long they play when starting, and how
+  often they come off the bench
 
 Small samples are shrunk towards the average for the player's position, so a
 centre-back with one lucky goal in 200 minutes is not priced like a striker.
 Shares (rather than raw per-90 rates) are used so a player's output scales
-with how good his team's attack is expected to be in a given match.
+with how good the team's attack is expected to be in a given match.
 """
 
 from __future__ import annotations
@@ -39,7 +39,10 @@ class PlayerParams:
     xi: float = 0.0025              # decay for rates and shares (per day)
     years: float = 3.0              # history window
     prior_minutes: float = 600.0    # shrinkage strength for shares
-    prior_minutes_cards: float = 1200.0
+    # Card rates are noisy: with 1,200 minutes of prior the most card-prone
+    # starters were booked ~25% less often than their share said (backtest,
+    # docs/BACKTEST.md section 4); 3,600 keeps every group within ~10%.
+    prior_minutes_cards: float = 3600.0
     prior_minutes_red: float = 6000.0
     start_halflife_days: float = 45.0
 
@@ -192,14 +195,16 @@ def selection_probs(team: str, as_of: pd.Timestamp, pm: pd.DataFrame,
         mw = matches[matches["date"] >= first[pid]]
         if mw["w"].sum() <= 0:
             continue
-        started = d.set_index("match_id")["started"].reindex(mw["match_id"]).fillna(False)
-        played = d.set_index("match_id")["minutes"].reindex(mw["match_id"]).notna()
+        # (reindexing leaves an object column; make it a real boolean array,
+        # because ~ on Python bools is integer negation)
+        started = d.set_index("match_id")["started"].reindex(mw["match_id"]) \
+            .fillna(False).astype(bool).to_numpy()
+        played = d.set_index("match_id")["minutes"].reindex(mw["match_id"]).notna().to_numpy()
         wv = mw["w"].to_numpy()
-        p_start = float(np.sum(wv * started.to_numpy()) / wv.sum())
-        not_started = ~started.to_numpy()
-        sub = played.to_numpy() & not_started
-        p_sub = float(np.sum(wv * sub) / max(np.sum(wv * not_started), 1e-9)) \
-            if not_started.any() else 0.0
+        p_start = float(np.sum(wv * started) / wv.sum())
+        not_started = ~started
+        sub = played & not_started
+        p_sub = float(np.sum(wv * sub) / np.sum(wv * not_started)) if not_started.any() else 0.0
         out.append({"player_id": pid, "p_start_hist": p_start, "p_sub_hist": p_sub,
                     "team_apps": int(played.sum())})
     return pd.DataFrame(out, columns=["player_id", "p_start_hist", "p_sub_hist", "team_apps"])
@@ -279,14 +284,11 @@ def build_squad(
     absent: list[str] | None = None,
     bench: list[str] | None = None,
     chance_col: str = "chance_of_playing_next_round",
-) -> tuple[pd.DataFrame, list[str], pd.DataFrame]:
-    """Squad table for the simulator, indexed by player_id.
+) -> tuple[pd.DataFrame, list[str]]:
+    """Squad table for the simulator, indexed by player_id, and notes.
 
     ``lineup``: the starting XI if known (names). Without it the XI is projected
     from recent selections and FPL availability. ``absent``: players ruled out.
-    Returns (squad, notes, regulars): ``regulars`` lists the team's recent
-    regular starters with whether they start in this XI, for the absence
-    adjustment.
     """
     notes: list[str] = []
     recent = profiles[(profiles["last_team"] == team)
@@ -321,7 +323,7 @@ def build_squad(
                           "minutes": 0, "apps": 0})
             named.add(f"new:{nm}")
             ids_by_name[nm] = f"new:{nm}"
-            notes.append(f"{nm}: no Premier League data, using average {g} rates")
+            notes.append(f"{nm}: no Premier League data, using average {g} rates.")
             continue
         named.add(row["player_id"])
         ids_by_name[nm] = row["player_id"]
@@ -331,7 +333,7 @@ def build_squad(
             r.setdefault("p_sub_hist", 0.3)
             extra.append(r)
             if row.get("last_team") != team:
-                notes.append(f"{row['player']}: rates from previous club ({row.get('last_team')})")
+                notes.append(f"{row['player']}: rates from previous club ({row.get('last_team')}).")
     if extra:
         sq = pd.concat([sq, pd.DataFrame(extra)], ignore_index=True)
     sq = sq.drop_duplicates("player_id").set_index("player_id")
@@ -355,11 +357,11 @@ def build_squad(
             other, sc = fpl_match(nm, fpl[fpl["team_name"] != team])
             where = f"now at {other['team_name']}" if other is not None and sc >= 0.9 \
                 else "no longer in FPL's Premier League player list"
-            notes.append(f"{nm}: not in FPL's {team} squad ({where}), left out")
+            notes.append(f"{nm}: not in FPL's {team} squad ({where}), left out.")
         sq.loc[gone, "avail"] = 0.0
         for pid in sq.index[(sq["status"] == "?") & sq.index.isin(named)]:
             notes.append(f"{sq.at[pid, 'player']}: named in the match file but not in FPL's "
-                         f"{team} squad list; check the name")
+                         f"{team} squad list; check the name.")
 
     absent_ids = set()
     for nm in absent or []:
@@ -369,45 +371,81 @@ def build_squad(
         elif not have_fpl or fpl_match(nm, fpl[fpl["team_name"] == team])[1] < 0.8:
             # (a player FPL lists but with no recent league minutes needs no note)
             notes.append(f"Absent player '{nm}' not recognised in {team}'s squad; check the "
-                         f"spelling")
+                         f"spelling.")
     sq.loc[list(absent_ids), "avail"] = 0.0
 
     if lineup:
         starters = [ids_by_name[nm] for nm in lineup if nm in ids_by_name]
         sq["start"] = sq.index.isin(starters)
         if len(set(starters)) != 11:
-            notes.append(f"{team} lineup has {len(set(starters))} recognised starters, not 11")
+            notes.append(f"{team} line-up has {len(set(starters))} recognised starters, not 11.")
         clash = absent_ids & set(starters)
         if clash:
             notes.append(f"{team}: {', '.join(sq.loc[list(clash), 'player'])} named in the XI "
-                         f"and as absent; kept in the XI")
+                         f"and as absent; kept in the XI.")
             absent_ids -= clash
     else:
         if sq.empty:
             notes.append(f"{team}: no recent Premier League line-ups to project from; put the "
-                         f"XI in the match file to price player markets")
+                         f"XI in the match file to price player markets.")
         sq["p_start"] = sq["p_start_hist"] * sq["avail"]
         gk = sq[sq["group"] == "GK"].sort_values("p_start", ascending=False).head(1).index
         out = sq[sq["group"] != "GK"].sort_values("p_start", ascending=False).head(10).index
         sq["start"] = sq.index.isin(gk.append(out))
-        notes.append(f"{team} XI projected from recent team selections and availability")
+        notes.append(f"{team} XI projected from recent team selections and availability.")
     sq["p_sub"] = np.where(sq["start"], 0.0, sq["p_sub_hist"].clip(0, 0.95) * sq["avail"])
     if bench:
         bench_ids = [ids_by_name[nm] for nm in bench if nm in ids_by_name]
         sq.loc[~sq.index.isin(bench_ids) & ~sq["start"], "p_sub"] = 0.0
     sq.loc[list(absent_ids), "start"] = False
     sq.loc[list(absent_ids), "p_sub"] = 0.0
+    sq["p_sub"] = balance_bench(sq)
 
-    regulars = sq[sq["p_start_hist"] >= REGULAR_START_RATE][
-        ["player", "group", "p_start_hist", "share_npxg", "min_st", "start", "avail",
-         "status", "news"]].copy()
     sq = sq[(sq["start"]) | (sq["p_sub"] > 0.02)]
-    return sq, notes, regulars
+    return sq, notes
 
 
-# A player who started at least this share of recent league games (45-day
-# half-life) counts as a regular for the absence adjustment.
-REGULAR_START_RATE = 0.5
+def start_minutes(full, min_st):
+    """For a starter: chance of playing the full 90, and the mean minute of
+    being substituted otherwise (shared with the simulator)."""
+    full = np.clip(full, 0.05, 0.98)
+    off = np.clip((min_st - 90 * full) / (1 - full), 45, 85)
+    return full, off
+
+
+def balance_bench(sq: pd.DataFrame, cap: float = 0.95) -> pd.Series:
+    """Bench players' chances of coming on, scaled so that their expected
+    minutes fill the minutes the starters are expected to leave.
+
+    Eleven players are on the pitch for the whole match, so without this a
+    long list of possible substitutes would take far more of the team's
+    goals, shots and cards than substitutes really do (they play about 6%
+    of a team's minutes).
+    """
+    st = sq["start"].astype(bool).to_numpy()
+    p = np.where(st, 0.0, sq["p_sub"].astype(float).to_numpy())
+    if st.sum() == 0:
+        return pd.Series(p, index=sq.index)
+    full, off = start_minutes(sq["full"].to_numpy(float)[st], sq["min_st"].to_numpy(float)[st])
+    target = float(np.sum(90 - (full * 90 + (1 - full) * off)))
+    m = np.clip(sq["min_sb"].to_numpy(float), 1, 60)
+    have = float(np.sum(p * m))
+    if have <= 0 or target <= 0:
+        return pd.Series(p, index=sq.index)
+    if have >= target:
+        p = p * target / have
+    else:  # scale up, keeping each chance under the cap
+        for _ in range(50):
+            free = (p > 0) & (p < cap)
+            fixed = float(np.sum(p[~free] * m[~free]))
+            flex = float(np.sum(p[free] * m[free]))
+            if flex <= 0 or target <= fixed:
+                break
+            k = (target - fixed) / flex
+            if k < 1 + 1e-6:
+                break
+            p = np.where(free, np.clip(p * k, 0, cap), p)
+    return pd.Series(p, index=sq.index)
 
 
 def presence(team: str, as_of: pd.Timestamp, pm: pd.DataFrame, xi: float,
@@ -415,8 +453,8 @@ def presence(team: str, as_of: pd.Timestamp, pm: pd.DataFrame, xi: float,
     """Decay-weighted share of the team's recent league games each player started.
 
     Uses the same time decay as the team ratings and counts games before a
-    player joined (or after he left) as games he did not start, so it says how
-    much of the team's current rating was earned with him in the side.
+    player joined (or after they left) as games they did not start, so it says
+    how much of the team's current rating was earned with them in the side.
     Returns (shares by player_id, total weight of the games); a small total
     weight means too few recent league games to say what is usual.
     """
@@ -435,7 +473,7 @@ def attack_shift(starter_ids: list, profiles: pd.DataFrame, pres: pd.Series,
                  priors: pd.DataFrame | None = None, groups: dict | None = None) -> float:
     """How much more (+) or less (-) attacking threat this XI has than usual.
 
-    A player's contribution is his share of team non-penalty xG times his
+    A player's contribution is their share of team non-penalty xG times their
     usual minutes as a starter. The shift is the XI's total contribution minus
     the presence-weighted total of everyone who has started for the team, so
     an XI like the team's usual one scores about zero, a missing regular
@@ -460,28 +498,21 @@ def attack_shift(starter_ids: list, profiles: pd.DataFrame, pres: pd.Series,
     return total
 
 
-def missing_attack(regulars: pd.DataFrame) -> float:
-    """Recent regular starters' attacking contribution that this XI is missing.
-
-    Each missing regular counts his share of team non-penalty xG, scaled by
-    his usual minutes and how often he has been starting (the team's ratings
-    already reflect the games he missed).
-    """
-    if regulars is None or regulars.empty:
-        return 0.0
-    out = regulars[~regulars["start"]]
-    return float((out["share_npxg"] * (out["min_st"] / 90.0) * out["p_start_hist"]).sum())
-
-
-def missing_defence(regulars: pd.DataFrame) -> float:
-    """Number of regular goalkeepers/defenders missing, weighted by start rate."""
-    if regulars is None or regulars.empty:
-        return 0.0
-    out = regulars[~regulars["start"] & regulars["group"].isin(DEFENSIVE_GROUPS)]
-    return float(out["p_start_hist"].sum())
+def missing_defenders(starter_ids: list, profiles: pd.DataFrame, pres: pd.Series) -> float:
+    """How many of the team's regular goalkeepers and defenders are not in
+    this XI, each weighted by how much of the team's recent history they
+    started (``presence``; regulars have at least 0.5)."""
+    starters = set(starter_ids)
+    total = 0.0
+    for pid, w in pres[pres >= 0.5].items():
+        if pid in starters or pid not in profiles.index:
+            continue
+        if profiles.at[pid, "group"] in DEFENSIVE_GROUPS:
+            total += float(w)
+    return total
 
 
-DEFENSIVE_GROUPS = ("GK", "CB", "FB", "WB", "DM")
+DEFENSIVE_GROUPS = ("GK", "CB", "FB", "WB")
 
 
 def team_news(team: str, fpl: pd.DataFrame | None, pm: pd.DataFrame, as_of: pd.Timestamp,

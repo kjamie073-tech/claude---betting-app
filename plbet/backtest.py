@@ -3,7 +3,8 @@
 Every prediction uses only matches that kicked off before that match's date,
 exactly as the model would have been used live. Results are compared with the
 bookmakers' own prices from football-data.co.uk (Bet365 pre-match and
-Pinnacle closing odds).
+closing, and the market average at kick-off; Pinnacle's prices stop partway
+through 2025-26).
 """
 
 from __future__ import annotations
@@ -328,3 +329,178 @@ def _run_block(args) -> dict[str, pd.DataFrame]:
 
 class SimpleNS:
     names: list = []
+
+
+# --------------------------------------------------------------------------
+# Summaries (python -m plbet backtest ...)
+# --------------------------------------------------------------------------
+
+def _ll(p, y) -> float:
+    p = np.clip(np.asarray(p, float), 1e-6, 1 - 1e-6)
+    y = np.asarray(y, float)
+    return float(-np.mean(y * np.log(p) + (1 - y) * np.log(1 - p)))
+
+
+def _md(df: pd.DataFrame) -> str:
+    cols = [str(c) for c in df.columns]
+    out = ["| " + " | ".join(cols) + " |",
+           "|" + "|".join("---" if i == 0 else "---:" for i in range(len(cols))) + "|"]
+    out += ["| " + " | ".join(str(v) for v in r) + " |" for r in df.itertuples(index=False)]
+    return "\n".join(out) + "\n"
+
+
+def _pct(x: float, d: int = 0) -> str:
+    return f"{100 * x:.{d}f}%"
+
+
+def _calibration_md(p, y, bins, min_n: int = 30) -> str:
+    d = pd.DataFrame({"p": np.asarray(p, float), "y": np.asarray(y, float)})
+    d["bin"] = pd.cut(d["p"], bins, include_lowest=True)
+    t = d.groupby("bin", observed=True).agg(n=("y", "size"), pred=("p", "mean"),
+                                            act=("y", "mean")).reset_index()
+    t = t[t["n"] >= min_n]
+    se = np.sqrt(t["pred"] * (1 - t["pred"]) / t["n"])
+    return _md(pd.DataFrame({
+        "Model said": [f"{max(0, 100 * b.left):.0f}–{100 * b.right:.0f}%" for b in t["bin"]],
+        "Bets": t["n"], "Average model chance": t["pred"].map(lambda v: _pct(v, 1)),
+        "Happened": t["act"].map(lambda v: _pct(v, 1)), "± (1 s.e.)": se.map(lambda v: _pct(v, 1)),
+    }))
+
+
+TEAM_NAMES = {
+    "result:home": "Home win", "result:draw": "Draw", "result:away": "Away win",
+    "goals:over:2.5": "Over 2.5 goals", "btts:yes": "Both teams to score",
+    "ht:home": "Home team ahead at half-time", "ht_goals:over:0.5": "Over 0.5 first-half goals",
+    "ht_goals:over:1.5": "Over 1.5 first-half goals",
+    "corners:over:8.5": "Over 8.5 corners", "corners:over:9.5": "Over 9.5 corners",
+    "corners:over:10.5": "Over 10.5 corners", "corners:over:11.5": "Over 11.5 corners",
+    "team_corners:home:over:4.5": "Home team over 4.5 corners",
+    "team_corners:away:over:3.5": "Away team over 3.5 corners",
+    "corners_1x2:home": "Home team more corners",
+    "cards:over:2.5": "Over 2.5 cards", "cards:over:3.5": "Over 3.5 cards",
+    "cards:over:4.5": "Over 4.5 cards", "cards:over:5.5": "Over 5.5 cards",
+    "team_cards:home:over:1.5": "Home team over 1.5 cards",
+    "team_cards:away:over:1.5": "Away team over 1.5 cards",
+    "shots:over:23.5": "Over 23.5 shots", "shots:over:26.5": "Over 26.5 shots",
+    "sot:over:7.5": "Over 7.5 shots on target", "sot:over:9.5": "Over 9.5 shots on target",
+    "team_shots:home:over:12.5": "Home team over 12.5 shots",
+    "team_shots:away:over:10.5": "Away team over 10.5 shots",
+    "team_sot:home:over:4.5": "Home team over 4.5 on target",
+    "team_sot:away:over:3.5": "Away team over 3.5 on target",
+    "fouls:over:20.5": "Over 20.5 fouls", "fouls:over:23.5": "Over 23.5 fouls",
+}
+PLAYER_NAMES = {"goal": "Anytime scorer", "assist": "Assist", "goal_or_assist": "Score or assist",
+                "shots:1+": "1+ shots", "shots:2+": "2+ shots", "shots:3+": "3+ shots",
+                "sot:1+": "1+ shots on target", "sot:2+": "2+ shots on target", "card": "Booked"}
+TEAM_GROUPS = {
+    "Result, goals and half-time": ("result", "goals", "btts", "ht"),
+    "Corners": ("corners", "team_corners"),
+    "Cards": ("cards", "team_cards"),
+    "Shots and shots on target": ("shots", "sot", "team_shots", "team_sot"),
+    "Fouls": ("fouls",),
+}
+
+
+def summarise_full(out: dict[str, pd.DataFrame], held_out: list[int]) -> str:
+    """Markdown summary of full_walk_forward results.
+
+    "Skill" is the improvement in log loss over a base rate learnt from the
+    seasons before ``held_out`` (for players, the base rate of their position).
+    """
+    team = out["team"]
+    errors = team[team["error"].notna()] if "error" in team else team.iloc[0:0]
+    team = team[team["error"].isna()] if "error" in team else team
+    players, builders, means = out["players"], out["builders"], out["means"]
+    held = team["season"].isin(held_out)
+    lines = [f"Matches simulated: {team['match_key'].nunique()} "
+             f"({', '.join(f'{int(s)}: {n}' for s, n in team.groupby('season')['match_key'].nunique().items())}); "
+             f"held out: {team.loc[held, 'match_key'].nunique()}; failed: {len(errors)}.\n"]
+
+    lines.append("### Team markets, held-out seasons\n")
+    rows = []
+    for mk, name in TEAM_NAMES.items():
+        d = team[team["market"] == mk]
+        if d.empty:
+            continue
+        tr, te = d[~d["season"].isin(held_out)], d[d["season"].isin(held_out)]
+        if te.empty or tr.empty:
+            continue
+        skill = 1 - _ll(te["p"], te["y"]) / _ll(np.full(len(te), tr["y"].mean()), te["y"])
+        rows.append({"Market": name, "Model average": _pct(te["p"].mean()),
+                     "Happened": _pct(te["y"].mean()), "Skill vs base rate": f"{100 * skill:+.1f}%"})
+    lines.append(_md(pd.DataFrame(rows)))
+    bins = (0, .1, .2, .3, .4, .5, .6, .7, .8, .9, 1)
+    for g, prefixes in TEAM_GROUPS.items():
+        d = team[team["market"].str.split(":").str[0].isin(prefixes)
+                 & team["market"].isin(TEAM_NAMES) & held]
+        if not d.empty:
+            lines.append(f"Calibration, {g.lower()} (held out):\n")
+            lines.append(_calibration_md(d["p"], d["y"], bins))
+
+    lines.append("### Player markets (starters), held-out seasons\n")
+    rows = []
+    for mk, name in PLAYER_NAMES.items():
+        d = players[players["market"] == mk]
+        tr, te = d[~d["season"].isin(held_out)], d[d["season"].isin(held_out)]
+        if te.empty or tr.empty:
+            continue
+        base = te["pos"].map(tr.groupby("pos")["y"].mean()).fillna(tr["y"].mean())
+        rows.append({"Market": name, "Player-matches": len(te),
+                     "Model average": _pct(te["p"].mean(), 1), "Happened": _pct(te["y"].mean(), 1),
+                     "Skill vs position average": f"{100 * (1 - _ll(te['p'], te['y']) / _ll(base, te['y'])):+.1f}%"})
+    lines.append(_md(pd.DataFrame(rows)))
+    pbins = (0, .05, .1, .2, .3, .4, .5, .6, .7, .8, .9, 1)
+    for mk in ("goal", "assist", "shots:1+", "shots:2+", "sot:1+", "card"):
+        d = players[(players["market"] == mk) & players["season"].isin(held_out)]
+        if not d.empty:
+            lines.append(f"Calibration, {PLAYER_NAMES[mk].lower()} (held out):\n")
+            lines.append(_calibration_md(d["p"], d["y"], pbins))
+
+    lines.append("### Bet builders: joint simulation against multiplying the legs\n")
+    b = builders.dropna(subset=["y"])
+    rows = []
+    for legs, d in b.groupby("legs"):
+        rows.append({"Builder": legs, "Matches": len(d),
+                     "Legs multiplied": _pct(d["p_product"].mean(), 1),
+                     "Joint model": _pct(d["p_joint"].mean(), 1), "Happened": _pct(d["y"].mean(), 1),
+                     "± (1 s.e.)": _pct(np.sqrt(d["y"].mean() * (1 - d["y"].mean()) / len(d)), 1),
+                     "Log loss joint / multiplied": f"{_ll(d['p_joint'], d['y']):.4f} / "
+                                                   f"{_ll(d['p_product'], d['y']):.4f}"})
+    lines.append(_md(pd.DataFrame(rows)))
+
+    lines.append("### Average per team per match: model against what happened\n")
+    t = means.groupby(["stat", "season"]).agg(model=("pred", "mean"), actual=("actual", "mean"))
+    t = t.reset_index().pivot(index="stat", columns="season")
+    t.columns = [f"{int(s)} {k}" for k, s in t.columns]
+    t = t[[c for s in sorted(means["season"].unique()) for c in (f"{int(s)} model", f"{int(s)} actual")]]
+    lines.append(_md(t.round(2).reset_index()))
+    return "\n".join(lines)
+
+
+def goals_vs_bookmakers(pred: pd.DataFrame, m: pd.DataFrame) -> str:
+    """Log loss of the model's 1X2 and over 2.5 against Bet365's prices (when
+    football-data collected them before the weekend, and at kick-off) and the
+    market average at kick-off, season by season (lower is better)."""
+    src = {"Bet365": market_probs(m, "B365"), "Bet365 closing": market_probs(m, "B365", True),
+           "average closing": market_probs(m, "Avg", True)}
+    mk = m[["match_key"]].copy()
+    for name, d in src.items():
+        mk = mk.join(d.add_prefix(f"{name}|"))
+    d = pred.merge(mk, on="match_key", how="left")
+    over = (d["hg"] + d["ag"] > 2.5)
+    rows = []
+    for s, g in d.groupby("season"):
+        row = {"Season": f"{int(s)}-{(int(s) + 1) % 100:02d}", "Matches": len(g),
+               "1X2 model": f"{score_1x2(g)['logloss']:.4f}"}
+        for name in src:
+            c = [f"{name}|mk_h", f"{name}|mk_d", f"{name}|mk_a"]
+            ok = g[c].notna().all(axis=1)
+            row[f"1X2 {name}"] = f"{score_1x2(g[ok], tuple(c))['logloss']:.4f}" if ok.mean() > 0.95 else ""
+        row["O/U 2.5 model"] = f"{score_binary(g['p_o25'], over.loc[g.index])['logloss']:.4f}"
+        for name in src:
+            c = f"{name}|mk_o25"
+            ok = g[c].notna()
+            row[f"O/U 2.5 {name}"] = (f"{score_binary(g.loc[ok, c], over.loc[g.index][ok])['logloss']:.4f}"
+                                      if ok.mean() > 0.95 else "")
+        rows.append(row)
+    return _md(pd.DataFrame(rows))

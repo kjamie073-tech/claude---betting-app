@@ -135,7 +135,7 @@ def analyse(sim: SimResult, legs: list[str], builder_odds=None,
                 f"underpriced (good for you).")
     if rep.valid_share < 0.999:
         rep.flags.append("Player legs assume the player plays; bookmakers usually void a "
-                         "player leg if he does not take part.")
+                         "player leg if the player does not take part.")
     return rep
 
 
@@ -145,13 +145,14 @@ BUILDER_KINDS = ("result", "dc", "btts", "goals", "team_goals", "corners", "team
 PLAYER_LEGS = ("goal", "assist", "goal_or_assist", "shots", "sot", "card")
 
 
-def _builder_legs(catalogue: pd.DataFrame) -> pd.DataFrame:
+def _builder_legs(catalogue: pd.DataFrame, exclude_players=()) -> pd.DataFrame:
     c = catalogue[catalogue["builder_ok"] & catalogue["prob"].notna()].copy()
     kind = c["spec"].str.split(":").str[0]
     c = c[kind.isin(BUILDER_KINDS)]
     is_pl = c["spec"].str.startswith("player:")
+    who = c["spec"].str.split(":").str[1]
     what = c["spec"].str.split(":").str[2]
-    c = c[~is_pl | what.isin(PLAYER_LEGS)]
+    c = c[~is_pl | (what.isin(PLAYER_LEGS) & ~who.isin(set(exclude_players)))]
     # Goalkeepers' shot and card lines are not builder material.
     return c[~c["spec"].str.contains(":saves:")]
 
@@ -164,36 +165,42 @@ def _subject(spec: str) -> str:
 
 
 def strong_legs(catalogue: pd.DataFrame, n: int = 12, min_edge_single: float = 0.03,
-                min_edge_player: float = 0.05) -> pd.DataFrame:
+                min_edge_player: float = 0.05, exclude_players=()) -> pd.DataFrame:
     """The legs to build around.
 
-    With your odds: legs whose edge clears the staking plan's minimum, best
-    first. Without odds: for each market, the line that is about 70% likely,
-    the kind of leg builders are made of, spread across markets and players.
-    These are the likeliest legs, not necessarily good value.
+    First, legs where your odds beat the model's fair odds by the staking
+    plan's minimum edge (``basis`` "edge"), best first. Then, from the
+    markets you did not price, the line in each market that is about 70%
+    likely (``basis`` "likely"), spread across markets and players: the kind
+    of leg builders are made of, worth looking up in the bookmaker's builder.
+    Legs you priced without that edge are left out. ``exclude_players``: players with
+    too little Premier League data to trust their chances.
     """
-    c = _builder_legs(catalogue)
+    c = _builder_legs(catalogue, exclude_players)
     priced = c[c["odds"].notna()]
-    if not priced.empty:
-        need = np.where(priced["spec"].str.startswith("player:"), min_edge_player,
-                        min_edge_single)
-        out = priced[priced["ev"] >= need].sort_values("ev", ascending=False)
-        return out.head(n).assign(basis="edge")
-    c = c[(c["prob"] >= 0.55) & (c["prob"] <= 0.88)].copy()
-    c["dist"] = (c["prob"] - 0.70).abs()
-    c = c.sort_values("dist").drop_duplicates("family")
-    c["subject"] = c["spec"].map(_subject)
-    c = c.sort_values("prob", ascending=False).drop_duplicates("subject")
-    c["kind"] = c["spec"].str.split(":").str[0]
-    c["rank"] = c.groupby("kind").cumcount()
-    cap = np.where(c["kind"] == "player", n // 3, 2)
-    out = c[c["rank"] < cap].sort_values("prob", ascending=False)
-    return out.head(n).drop(columns=["dist", "subject", "kind", "rank"]).assign(basis="likely")
+    need = np.where(priced["spec"].str.startswith("player:"), min_edge_player, min_edge_single)
+    value = priced[priced["ev"] >= need].sort_values("ev", ascending=False).head(n)
+    rest = c[c["odds"].isna()]
+    rest = rest[(rest["prob"] >= 0.55) & (rest["prob"] <= 0.88)].copy()
+    rest["dist"] = (rest["prob"] - 0.70).abs()
+    rest = rest.sort_values("dist").drop_duplicates("family")
+    rest["subject"] = rest["spec"].map(_subject)
+    taken = set(value["spec"].map(_subject))
+    rest = rest[~rest["subject"].isin(taken)]
+    rest = rest.sort_values("prob", ascending=False).drop_duplicates("subject")
+    rest["kind"] = rest["spec"].str.split(":").str[0]
+    rest["rank"] = rest.groupby("kind").cumcount()
+    cap = np.where(rest["kind"] == "player", n // 3, 2)
+    likely = rest[rest["rank"] < cap].sort_values("prob", ascending=False) \
+        .drop(columns=["dist", "subject", "kind", "rank"])
+    out = pd.concat([value.assign(basis="edge"), likely.assign(basis="likely")])
+    return out.head(n).reset_index(drop=True)
 
 
 def suggest(sim: SimResult, catalogue: pd.DataFrame, n_legs=(2, 3, 4), top: int = 6,
             min_p: float = 0.18, max_p: float = 0.55, n_candidates: int = 12,
-            max_implied: float = 0.9, min_pair_lift: float = NEG) -> pd.DataFrame:
+            max_implied: float = 0.9, min_pair_lift: float = NEG,
+            exclude_players=()) -> pd.DataFrame:
     """Builders worth pricing up.
 
     Candidates are the strong legs (strong_legs). A combination uses each
@@ -201,17 +208,20 @@ def suggest(sim: SimResult, catalogue: pd.DataFrame, n_legs=(2, 3, 4), top: int 
     almost guarantees the other (``max_implied``: the second adds bookmaker
     margin but hardly any odds) and pairs that work against each other, and
     lands at a sensible price (model chance ``min_p``..``max_p``, fair odds
-    about 1.8 to 5.5). With your odds, combinations are ranked by their edge if
-    the bookmaker priced them as your single prices multiplied together (an
-    upper bound: bookmakers trim the price of linked legs); without odds, by
-    how much the links between legs raise the chance above the legs' chances
+    about 1.8 to 5.5). Combinations with more value legs (legs your odds show
+    an edge on) come first; then, if every leg is priced, the edge if the
+    bookmaker priced the builder as your single prices multiplied together
+    (an upper bound: bookmakers trim the price of linked legs), otherwise how
+    much the links between legs raise the chance above the legs' chances
     multiplied together.
     """
-    cols = ["legs", "labels", "prob", "fair_odds", "lift", "singles_odds", "edge_if_singles"]
-    cand = strong_legs(catalogue, n=n_candidates)
+    cols = ["legs", "labels", "prob", "fair_odds", "lift", "singles_odds", "edge_if_singles",
+            "value_legs"]
+    cand = strong_legs(catalogue, n=n_candidates, exclude_players=exclude_players)
     if len(cand) < 2:
         return pd.DataFrame(columns=cols)
     priced = (cand["basis"] == "edge").all()
+    is_value = dict(zip(cand["spec"], cand["basis"] == "edge"))
     wins = {r.spec: markets.evaluate(r.spec, sim) for r in cand.itertuples()}
     subj = {r.spec: _subject(r.spec) for r in cand.itertuples()}
     rows = []
@@ -246,10 +256,12 @@ def suggest(sim: SimResult, catalogue: pd.DataFrame, n_legs=(2, 3, 4), top: int 
                 "prob": p, "fair_odds": 1 / p, "lift": p / indep if indep else np.nan,
                 "singles_odds": singles,
                 "edge_if_singles": p * singles - 1 if priced else np.nan,
+                "value_legs": int(sum(is_value[c.spec] for c in combo)),
             })
     if not rows:
         return pd.DataFrame(columns=cols)
-    df = pd.DataFrame(rows).sort_values("edge_if_singles" if priced else "lift", ascending=False)
+    df = pd.DataFrame(rows).sort_values(
+        ["value_legs", "edge_if_singles" if priced else "lift"], ascending=False)
     # Avoid near-duplicates that share most legs.
     picked, seen = [], []
     for r in df.itertuples():

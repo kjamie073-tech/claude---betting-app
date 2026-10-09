@@ -36,12 +36,20 @@ MARKET_WEIGHT_GOALS = 0.75
 # Corners/cards lines: no historical odds to test against, so an even split.
 MARKET_WEIGHT_COUNTS = 0.5
 # How strongly a line-up that differs from a team's usual one moves its
-# expected goals: log-multiplier per unit of players.attack_shift. Fitted on
-# real line-ups, 2021-22 to 2024-25 (docs/BACKTEST.md).
-LINEUP_COEF = 0.3
+# expected goals: log-multiplier per unit of players.attack_shift. Estimated
+# from real line-ups and npxG, 2021-22 to 2026-27 (docs/BACKTEST.md).
+LINEUP_COEF = 0.27
+# Each regular goalkeeper or defender missing from the opponent's XI raises a
+# team's expected goals by about 4.5%, measured against the league-average
+# number missing (team ratings already include typical absences). Same study.
+DEFENCE_COEF = 0.045
+TYPICAL_MISSING_DEFENDERS = 0.94
 # Need this much recent league history (decay-weighted games) to know what a
 # team's usual XI is.
 MIN_PRESENCE_WEIGHT = 3.0
+# Players with fewer league minutes than this over three seasons are priced
+# mostly from position averages; they are kept out of suggested builder legs.
+LOW_DATA_MINUTES = 600
 
 
 @dataclass
@@ -369,7 +377,8 @@ def analyse(spec: MatchSpec, as_of: pd.Timestamp | None = None, seed: int = 7,
     referee = resolve_referee(spec.referee, ref_known)
     if spec.referee and referee is None:
         notes.append(f"Referee '{spec.referee}' has no Premier League history in the data; "
-                     f"treated as an average referee.")
+                     f"treated as an average referee. In the backtest, referees new to the "
+                     f"league gave about 10% more yellow cards and fouls than that.")
     fixture = features.fixture_rows(home, away, season, prom, referee=referee)
     lh_m, la_m = (float(x) for x in gm.lambdas(fixture))
 
@@ -379,10 +388,10 @@ def analyse(spec: MatchSpec, as_of: pd.Timestamp | None = None, seed: int = 7,
     chance_col = load.fpl_chance_column(home, away) if fpl is not None and not fpl.empty \
         else "chance_of_playing_next_round"
     prof_idx = profiles.set_index("player_id")
-    squads, pen_info, news, shift = {}, {}, {}, {}
+    squads, pen_info, news, shift, miss_def = {}, {}, {}, {}, {}
     for side, team in (("h", home), ("a", away)):
         key = "home" if side == "h" else "away"
-        sq, sq_notes, _ = players.build_squad(
+        sq, sq_notes = players.build_squad(
             team, as_of, profiles, priors, pm, fpl,
             lineup=spec.lineups.get(key), absent=spec.absent.get(key),
             bench=spec.bench.get(key), chance_col=chance_col)
@@ -395,15 +404,27 @@ def analyse(spec: MatchSpec, as_of: pd.Timestamp | None = None, seed: int = 7,
         pen_info[side] = (float(np.clip(share, 0.02, 0.25)), order)
         # How this XI compares with the side the team's ratings were earned with.
         pres, wsum = players.presence(team, as_of, pm, gm.params.xi)
-        shift[side] = players.attack_shift(list(sq.index[sq["start"]]), prof_idx, pres, priors,
-                                           sq["group"].to_dict()) \
-            if wsum >= MIN_PRESENCE_WEIGHT else 0.0
-    lineup_mult = {s: float(np.clip(np.exp(LINEUP_COEF * v), 0.8, 1.2)) for s, v in shift.items()}
+        xi_ids = list(sq.index[sq["start"]])
+        if wsum >= MIN_PRESENCE_WEIGHT:
+            shift[side] = players.attack_shift(xi_ids, prof_idx, pres, priors,
+                                               sq["group"].to_dict())
+            miss_def[side] = players.missing_defenders(xi_ids, prof_idx, pres)
+        else:
+            shift[side], miss_def[side] = 0.0, TYPICAL_MISSING_DEFENDERS
+    # A team's attack moves with its own XI and with the defenders the
+    # opponent is missing.
+    lineup_mult = {
+        s: float(np.clip(np.exp(LINEUP_COEF * shift[s] + DEFENCE_COEF
+                                * (miss_def[o] - TYPICAL_MISSING_DEFENDERS)), 0.8, 1.2))
+        for s, o in (("h", "a"), ("a", "h"))}
     if any(abs(v - 1) >= 0.01 for v in lineup_mult.values()):
         notes.append(
             f"Line-up adjustment to expected goals (before any bookmaker anchor): {home} "
-            f"x{lineup_mult['h']:.2f}, {away} x{lineup_mult['a']:.2f}, for missing or returning "
-            f"regulars compared with the sides that earned each team's rating.")
+            f"x{lineup_mult['h']:.2f}, {away} x{lineup_mult['a']:.2f}. Each XI is compared with "
+            f"the sides that earned the team's rating (attacking players missing or back), and "
+            f"each team gains from regular goalkeepers and defenders the other side is missing "
+            f"(missing now: {home} {miss_def['h']:.1f}, {away} {miss_def['a']:.1f}, weighted by "
+            f"how regularly they start; about 0.9 is normal).")
     lh_m *= lineup_mult["h"]
     la_m *= lineup_mult["a"]
 
@@ -467,8 +488,16 @@ def analyse(spec: MatchSpec, as_of: pd.Timestamp | None = None, seed: int = 7,
         legs = b["legs"]
         leg_odds = [o.get(l) for l in legs] if all(l in o for l in legs) else None
         reports.append(builder.analyse(sim, legs, b.get("odds"), leg_odds))
-    legs = builder.strong_legs(cat) if catalogue else pd.DataFrame()
-    sugg = builder.suggest(sim, cat) if catalogue else pd.DataFrame()
+    low = []
+    if not ptab.empty:
+        lo = ptab[(ptab["minutes_3y"] < LOW_DATA_MINUTES) & ptab["starts"]]
+        low = list(lo["player"])
+        if low:
+            notes.append(f"{', '.join(low)}: under {LOW_DATA_MINUTES} Premier League minutes in "
+                         f"the last three seasons, so their player chances lean on averages for "
+                         f"their position; left out of the suggested legs.")
+    legs = builder.strong_legs(cat, exclude_players=low) if catalogue else pd.DataFrame()
+    sugg = builder.suggest(sim, cat, exclude_players=low) if catalogue else pd.DataFrame()
 
     return AnalysisResult(
         spec=spec, home=home, away=away, as_of=as_of,

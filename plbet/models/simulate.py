@@ -29,9 +29,17 @@ from scipy import stats
 from .counts import COPULA_DIMS, STATS, MatchStatsModel, nb_ppf
 from .features import SCORE_COVS, score_covariates
 from .goals import score_matrix
+from .players import start_minutes
 
-OWN_GOAL_SHARE = 0.03     # share of goals that are own goals
+OWN_GOAL_SHARE = 0.038    # share of goals that are own goals (2022-23 to 2025-26)
 ASSIST_RATE = 0.76        # share of open-play goals with an assist (Understat)
+# Substitutes produce more per recorded minute than their usual rates
+# suggest: they come on when games are more open and play the stoppage time
+# that Understat's minute counts leave out (substitutes play about 6% of the
+# minutes but take about 13% of the goals and shots). Bench players' shares
+# are multiplied by these factors, fitted so that the simulated substitutes'
+# share of each stat matches 2022-23 to 2024-25.
+SUB_BOOST = {"npxg": 1.74, "xa": 1.71, "ngon": 1.85, "ngoff": 1.82, "yellow": 2.45, "red": 1.6}
 
 
 @dataclass
@@ -116,8 +124,7 @@ def _minutes(squad: pd.DataFrame, n: int, rng) -> np.ndarray:
     mins = np.zeros((n, P), dtype=np.float32)
     for j, (_, r) in enumerate(squad.iterrows()):
         if r["start"]:
-            full = float(np.clip(r["full"], 0.05, 0.98))
-            off_mean = float(np.clip((r["min_st"] - 90 * full) / (1 - full), 45, 85))
+            full, off_mean = (float(x) for x in start_minutes(r["full"], r["min_st"]))
             off = np.clip(rng.normal(off_mean, 12, n), 20, 89)
             mins[:, j] = np.where(rng.random(n) < full, 90, off)
         else:
@@ -140,18 +147,42 @@ def _categorical(p: np.ndarray, rng) -> np.ndarray:
     return np.minimum((u > c).sum(axis=1), p.shape[1] - 1)
 
 
+def _distinct(counts: np.ndarray, w: np.ndarray, rng) -> np.ndarray:
+    """Give the events in each row to different players, each drawn by weight
+    from the players not already chosen (a player is booked once: a second
+    yellow is a red card)."""
+    n, P = w.shape
+    out = np.zeros((n, P), dtype=np.int16)
+    w = w.copy()
+    rows = np.arange(n)
+    for k in range(int(counts.max()) if n else 0):
+        live = (counts > k) & (w.sum(axis=1) > 0)
+        if not live.any():
+            break
+        idx = rows[live]
+        j = _categorical(w[live], rng)
+        out[idx, j] += 1
+        w[idx, j] = 0.0
+    return out
+
+
 def simulate_squad(squad: pd.DataFrame, goals: np.ndarray, ngon: np.ndarray, ngoff: np.ndarray,
                    yellow: np.ndarray, red: np.ndarray, pen_goal_share: float,
                    pen_order: list[int], rng) -> SquadSim:
     n, P = len(goals), len(squad)
     mins = _minutes(squad, n, rng)
     frac = mins / 90.0
-    w_np = _norm(squad["share_npxg"].to_numpy()[None, :] * frac)
-    w_xa = squad["share_xa"].to_numpy()[None, :] * frac
-    w_on = _norm(squad["share_ngon"].to_numpy()[None, :] * frac)
-    w_off = _norm(squad["share_ngoff"].to_numpy()[None, :] * frac)
-    w_y = _norm(squad["yellow90"].to_numpy()[None, :] * frac)
-    w_r = _norm(squad["red90"].to_numpy()[None, :] * frac)
+    bench = ~squad["start"].to_numpy(bool)
+
+    def rate(col: str, key: str) -> np.ndarray:
+        return (squad[col].to_numpy(float) * np.where(bench, SUB_BOOST[key], 1.0))[None, :]
+
+    w_np = _norm(rate("share_npxg", "npxg") * frac)
+    w_xa = rate("share_xa", "xa") * frac
+    w_on = _norm(rate("share_ngon", "ngon") * frac)
+    w_off = _norm(rate("share_ngoff", "ngoff") * frac)
+    w_y = _norm(rate("yellow90", "yellow") * frac)
+    w_r = _norm(rate("red90", "red") * frac)
 
     og = rng.binomial(goals, OWN_GOAL_SHARE)
     pen = rng.binomial(goals - og, np.clip(pen_goal_share, 0, 0.35))
@@ -202,7 +233,7 @@ def simulate_squad(squad: pd.DataFrame, goals: np.ndarray, ngon: np.ndarray, ngo
                 first[idx[f], taker[f]] = True
     ngon_p = rng.multinomial(ngon.astype(np.int64), w_on)
     ngoff_p = rng.multinomial(ngoff.astype(np.int64), w_off)
-    yel = rng.multinomial(yellow.astype(np.int64), w_y)
+    yel = _distinct(yellow.astype(np.int64), w_y, rng)
     rd = rng.multinomial(red.astype(np.int64), w_r)
     shots = g + ngon_p + ngoff_p
     sot = g + ngon_p

@@ -186,6 +186,52 @@ def test_attack_shift_is_zero_for_the_usual_xi():
     assert players.attack_shift(["b", "c"], prof, pres2) == pytest.approx(-0.15)
 
 
+def _player_matches(rows):
+    """Minimal Understat-style player match table: (match, day, player, started, minutes)."""
+    d = pd.DataFrame(rows, columns=["match_id", "day", "player_id", "started", "minutes"])
+    d["date"] = pd.Timestamp("2026-01-01") + pd.to_timedelta(d["day"], unit="D")
+    d["team"] = "Team"
+    return d
+
+
+def test_selection_probs_are_probabilities():
+    # p1 starts every game; p2 starts two, comes on once, sits out once;
+    # p3 comes off the bench in two of four games
+    rows = []
+    for k in range(4):
+        rows.append((k, 7 * k, "p1", True, 90))
+    rows += [(0, 0, "p2", True, 90), (1, 7, "p2", True, 80), (2, 14, "p2", False, 10)]
+    rows += [(1, 7, "p3", False, 10), (3, 21, "p3", False, 20)]
+    sel = players.selection_probs("Team", pd.Timestamp("2026-02-01"), _player_matches(rows))
+    sel = sel.set_index("player_id")
+    assert sel["p_start_hist"].between(0, 1).all()
+    assert sel["p_sub_hist"].between(0, 1).all()
+    assert sel.at["p1", "p_start_hist"] == pytest.approx(1.0)
+    assert sel.at["p1", "p_sub_hist"] == 0.0
+    assert 0 < sel.at["p2", "p_sub_hist"] < 1
+    assert 0 < sel.at["p3", "p_sub_hist"] < 1
+
+
+def test_bench_minutes_fill_what_the_starters_leave():
+    n_bench = 12
+    sq = pd.DataFrame({
+        "start": [True] * 11 + [False] * n_bench,
+        "full": [0.5] * 11 + [0.0] * n_bench,
+        "min_st": [80.0] * 11 + [0.0] * n_bench,
+        "min_sb": [0.0] * 11 + [20.0] * n_bench,
+        "p_sub": [0.0] * 11 + [0.9] * n_bench,
+    })
+    p = players.balance_bench(sq)
+    full, off = players.start_minutes(np.full(11, 0.5), np.full(11, 80.0))
+    left = float(np.sum(90 - (full * 90 + (1 - full) * off)))
+    assert float((p * sq["min_sb"]).sum()) == pytest.approx(left)
+    assert (p[:11] == 0).all() and (p <= 0.95).all()
+    # a short bench is scaled up, but no one beyond the cap
+    short = sq.iloc[:13].assign(p_sub=[0.0] * 11 + [0.1, 0.1])
+    p2 = players.balance_bench(short)
+    assert (p2 <= 0.95 + 1e-12).all() and p2.iloc[11] > 0.1
+
+
 # ---------------------------------------------------------------- tracker
 
 def test_tracker_round_trip(tmp_path):
@@ -207,3 +253,15 @@ def test_tracker_round_trip(tmp_path):
     assert s["avg_clv"] == pytest.approx(1.9 / 1.8 - 1)
     with pytest.raises(ValueError):
         tracker.settle(path, r1, "Maybe")
+
+
+def test_yellow_cards_go_to_different_players():
+    from plbet.models.simulate import _distinct
+    rng = np.random.default_rng(3)
+    counts = rng.poisson(3.0, 5000)
+    w = np.tile(np.array([0.5, 0.2, 0.1, 0.1, 0.05, 0.05]), (5000, 1))
+    out = _distinct(counts, w, rng)
+    assert out.max() <= 1
+    assert (out.sum(axis=1) == np.minimum(counts, 6)).all()
+    # the most card-prone player is booked most often
+    assert out[:, 0].mean() > out[:, 1].mean() > out[:, 5].mean()
