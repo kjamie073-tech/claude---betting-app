@@ -22,7 +22,7 @@ import numpy as np
 import pandas as pd
 import yaml
 
-from . import builder, markets, odds as odds_mod
+from . import builder, markets, odds as odds_mod, workload
 from .data import load, names
 from .models import features, players
 from .models.counts import MatchStatsModel
@@ -61,6 +61,8 @@ class MatchSpec:
     lineups: dict[str, list[str]] = field(default_factory=dict)
     bench: dict[str, list[str]] = field(default_factory=dict)
     absent: dict[str, list[str]] = field(default_factory=dict)
+    # Expected minutes if a player starts (fatigue, fitness), by side and name.
+    minutes: dict[str, dict[str, float]] = field(default_factory=dict)
     odds: dict[str, float] = field(default_factory=dict)
     builders: list[dict] = field(default_factory=list)
     sims: int = 100_000
@@ -80,6 +82,8 @@ class MatchSpec:
             lineups={k: v for k, v in (d.get("lineups") or {}).items() if v},
             bench={k: v for k, v in (d.get("bench") or {}).items() if v},
             absent={k: v for k, v in (d.get("absent") or {}).items() if v},
+            minutes={k: {str(n): float(m) for n, m in v.items()}
+                     for k, v in (d.get("minutes") or {}).items() if v},
             odds={str(k): odds_mod.to_decimal(v) for k, v in (d.get("odds") or {}).items()},
             builders=d.get("builders") or [],
             sims=int(s.get("sims", 100_000)),
@@ -118,6 +122,8 @@ class AnalysisResult:
     notes: list[str]
     goals_model: GoalsModel
     stats_model: MatchStatsModel
+    # side -> (recent games in all competitions, workload notes)
+    workload: dict[str, tuple[list[str], list[str]]] = field(default_factory=dict)
 
 
 # ------------------------------------------------------------------ helpers
@@ -394,7 +400,8 @@ def analyse(spec: MatchSpec, as_of: pd.Timestamp | None = None, seed: int = 7,
         sq, sq_notes = players.build_squad(
             team, as_of, profiles, priors, pm, fpl,
             lineup=spec.lineups.get(key), absent=spec.absent.get(key),
-            bench=spec.bench.get(key), chance_col=chance_col)
+            bench=spec.bench.get(key), chance_col=chance_col,
+            minutes=spec.minutes.get(key))
         notes += sq_notes
         squads[side] = sq
         news[side] = players.team_news(team, fpl, pm, as_of, chance_col)
@@ -499,11 +506,18 @@ def analyse(spec: MatchSpec, as_of: pd.Timestamp | None = None, seed: int = 7,
     legs = builder.strong_legs(cat, exclude_players=low) if catalogue else pd.DataFrame()
     sugg = builder.suggest(sim, cat, exclude_players=low) if catalogue else pd.DataFrame()
 
+    wl = {}
+    for side, team in (("h", home), ("a", away)):
+        try:
+            wl[side] = workload.describe(team, squads[side], kickoff)
+        except Exception as exc:  # missing or odd ESPN data must not stop a report
+            wl[side] = ([], [f"Workload for {team} unavailable: {type(exc).__name__}: {exc}"])
+
     return AnalysisResult(
         spec=spec, home=home, away=away, as_of=as_of,
         lambdas_model=(lh_m, la_m), lambdas_market=lam_mkt, lambdas=(lh, la), rho=gm.rho_,
         sim=sim, catalogue=cat, player_table=ptab, squads=squads, news=news,
         lineup_shift=shift, builders=reports,
         strong_legs=legs, suggestions=sugg, expected=exp, referee=referee, notes=notes,
-        goals_model=gm, stats_model=sm,
+        goals_model=gm, stats_model=sm, workload=wl,
     )

@@ -23,7 +23,7 @@ on:
         description: "Re-download finished seasons too (true/false)"
         default: "false"
       only:
-        description: "Limit to sources (space separated: football-data understat fpl)"
+        description: "Limit to sources (space separated: football-data understat fpl espn)"
         default: ""
 
 permissions:

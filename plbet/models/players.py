@@ -284,11 +284,14 @@ def build_squad(
     absent: list[str] | None = None,
     bench: list[str] | None = None,
     chance_col: str = "chance_of_playing_next_round",
+    minutes: dict[str, float] | None = None,
 ) -> tuple[pd.DataFrame, list[str]]:
     """Squad table for the simulator, indexed by player_id, and notes.
 
     ``lineup``: the starting XI if known (names). Without it the XI is projected
     from recent selections and FPL availability. ``absent``: players ruled out.
+    ``minutes``: expected minutes if starting, by name (tired, short of
+    fitness), replacing the player's usual minutes.
     """
     notes: list[str] = []
     recent = profiles[(profiles["last_team"] == team)
@@ -399,10 +402,27 @@ def build_squad(
         sq.loc[~sq.index.isin(bench_ids) & ~sq["start"], "p_sub"] = 0.0
     sq.loc[list(absent_ids), "start"] = False
     sq.loc[list(absent_ids), "p_sub"] = 0.0
+    for nm, m in (minutes or {}).items():
+        j, _ = names.best_match(nm, sq["player"])
+        if j is None:
+            notes.append(f"Minutes given for '{nm}', who is not recognised in {team}'s squad.")
+            continue
+        pid = sq.index[j]
+        old = float(sq.at[pid, "min_st"])
+        sq.at[pid, "full"], sq.at[pid, "min_st"] = expected_minutes(m)
+        notes.append(f"{sq.at[pid, 'player']}: expected minutes if starting set to {m:.0f} "
+                     f"(usually {old:.0f}).")
     sq["p_sub"] = balance_bench(sq)
 
     sq = sq[(sq["start"]) | (sq["p_sub"] > 0.02)]
     return sq, notes
+
+
+def expected_minutes(m: float) -> tuple[float, float]:
+    """(chance of playing 90, mean minutes when starting) for a starter
+    expected to play ``m`` minutes; substitutions then come around the hour."""
+    m = float(np.clip(m, 20, 90))
+    return float(np.clip((m - 60) / 30, 0.05, 0.98)), m
 
 
 def start_minutes(full, min_st):

@@ -8,6 +8,8 @@
   analyse MATCH.yaml           full report (markdown) for one match
   quick HOME AWAY              report with no odds or line-ups
   builder MATCH.yaml --legs .. price one bet builder
+  acca [MATCH.yaml ..]         one builder per match stacked into an acca
+       [--gameweek N]          (every fixture of round N; match files from --matches)
   stake --prob P --odds O      staking-plan stake for one bet
   tracker new|add|settle|summary
   backtest full|goals          walk-forward backtests (slow; see docs/BACKTEST.md)
@@ -47,6 +49,11 @@ bench:
 absent:
   home: []
   away: []
+# Expected minutes if starting, for players likely to come off early (heavy
+# midweek minutes, back late from international duty, short of fitness).
+minutes:
+  home: {{}}               # e.g. {{"Bukayo Saka": 65}}
+  away: {{}}
 
 # Bookmaker odds you can see (decimal 2.5, fractional 6/4, or evs). The 1X2
 # and over/under 2.5 prices are used to anchor the model; the rest are
@@ -106,6 +113,27 @@ def main(argv: list[str] | None = None) -> int:
     b.add_argument("match")
     b.add_argument("--legs", nargs="+", required=True)
     b.add_argument("--odds")
+    b.add_argument("--free-bet", action="store_true",
+                   help="value it as a free bet (stake not returned)")
+    ac = sub.add_parser("acca")
+    ac.add_argument("match", nargs="*")
+    ac.add_argument("--gameweek", type=int)
+    ac.add_argument("--matches", default="matches",
+                    help="folder of match files used for --gameweek fixtures")
+    ac.add_argument("--odds", help="the bookmaker's price for the whole acca")
+    ac.add_argument("--stake", type=float, default=5.0)
+    ac.add_argument("--boost", type=float, default=0.0,
+                    help="winnings boost on the acca, e.g. 0.25 for 25%%")
+    ac.add_argument("--insurance", action="store_true",
+                    help="stake back as a free bet if exactly one builder loses")
+    ac.add_argument("--free-bet", action="store_true", help="the stake is a free bet")
+    ac.add_argument("--legs", type=int, default=3, help="legs per suggested builder")
+    ac.add_argument("--min-p", type=float, default=0.30)
+    ac.add_argument("--max-p", type=float, default=0.80)
+    ac.add_argument("--sims", type=int)
+    ac.add_argument("--out", default="reports")
+    ac.add_argument("--no-reports", action="store_true",
+                    help="skip writing each match's full report")
     s = sub.add_parser("stake")
     s.add_argument("--prob", type=float, required=True)
     s.add_argument("--odds", required=True)
@@ -211,10 +239,15 @@ def main(argv: list[str] | None = None) -> int:
         print(f"model chance {rep.joint:.2%} (independent {rep.independent:.2%}, link x{rep.lift:.2f}); "
               f"fair odds {rep.fair_odds:.2f}")
         print(rep.verdict())
+        if args.free_bet and rep.odds:
+            print(f"As a free bet: expected return {rep.joint * (rep.odds - 1):.2f} per pound of "
+                  f"free bet (higher is better; compare builders on this number).")
         for fl in rep.flags:
             print("-", fl)
         print(rep.pairs.round(3).to_string(index=False))
         return 0
+    if args.cmd == "acca":
+        return _acca(args)
     if args.cmd == "stake":
         from .staking import StakingPlan
         print(json.dumps(StakingPlan(args.bank).stake(args.prob, args.odds, args.kind), indent=2))
@@ -257,6 +290,53 @@ def main(argv: list[str] | None = None) -> int:
             print(json.dumps(tracker.summary(args.path), indent=2, default=str))
         return 0
     return 1
+
+
+def _acca(args) -> int:
+    from . import acca
+    from .analysis import Bundle, MatchSpec, analyse
+    from .report import render
+    specs = [MatchSpec.from_yaml(m) for m in args.match]
+    if args.gameweek is not None:
+        from .data import load
+        fx = load.fpl_fixtures()
+        fx = fx[(fx["event"] == args.gameweek) & (fx["finished"] == False)]  # noqa: E712
+        have = {(s.home, s.away) for s in specs}
+        for r in fx.sort_values("kickoff").itertuples():
+            if (r.home, r.away) in have:
+                continue
+            path = Path(args.matches) / _match_path(r.home, r.away, r.kickoff)
+            if path.exists():
+                specs.append(MatchSpec.from_yaml(path))
+            else:
+                print(f"no match file for {r.home} v {r.away} ({path}); using the model alone",
+                      file=sys.stderr)
+                specs.append(MatchSpec(home=r.home, away=r.away, kickoff=r.kickoff))
+    if not specs:
+        print("give match files or --gameweek", file=sys.stderr)
+        return 2
+    now = pd.Timestamp(dt.datetime.now())
+    kos = [s.kickoff for s in specs if s.kickoff is not None]
+    as_of = min([k - pd.Timedelta(hours=1) for k in kos] + [now])
+    bundle = Bundle.fit(as_of)
+    legs, skipped = [], []
+    for s in specs:
+        if args.sims:
+            s.sims = args.sims
+        print(f"analysing {s.home} v {s.away} ...", file=sys.stderr)
+        res = analyse(s, bundle=bundle)
+        if not args.no_reports:
+            render(res, args.out)
+        leg = acca.pick_builder(res, n_legs=(args.legs,), min_p=args.min_p, max_p=args.max_p)
+        if leg is None:
+            skipped.append(f"{res.home} v {res.away}: no builder in the "
+                           f"{args.min_p:.0%}-{args.max_p:.0%} range")
+        else:
+            legs.append(leg)
+    promo = acca.Promo(boost=args.boost, insurance=args.insurance, free_bet=args.free_bet)
+    rep = acca.combine(legs, stake=args.stake, acca_odds=args.odds, promo=promo)
+    print(acca.render(rep, skipped, args.out))
+    return 0
 
 
 if __name__ == "__main__":

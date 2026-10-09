@@ -121,6 +121,19 @@ def render(r: AnalysisResult, out_dir: str | Path | None = None) -> str:
     lines.append("_Injury news from the Fantasy Premier League site, with how many of the "
                  "team's last 10 league games each player started._\n")
 
+    # ------------------------------------------------------------- workload
+    lines.append("## Games in all competitions\n")
+    for side, team in (("h", home), ("a", away)):
+        games, wnotes = r.workload.get(side, ([], []))
+        lines.append(f"**{team}** — last games: " + ("; ".join(games) if games else
+                                                    "none in the last 6 weeks") + ".\n")
+        for n in wnotes:
+            lines.append(f"- {n}")
+        lines.append("")
+    lines.append("_Cup, European and international games from ESPN. The model's ratings use "
+                 "league games only; use this to set `minutes:` or the XI in the match file "
+                 "when a player is tired or likely to be rested._\n")
+
     # ------------------------------------------------------------- form
     as_of = r.as_of
     lines.append("## Form (last 6 league games)\n")

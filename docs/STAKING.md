@@ -105,7 +105,31 @@ Every month (or every 50 settled bets), look at the tracker's Summary sheet:
 3. **CLV.** Average CLV below 0% over 100+ bets means the edge is probably not
    real, whatever the short-term profit says.
 
-## 7. A word on the house edge
+## 7. Accumulators of bet builders
+
+J's usual bet is one builder per game stacked into one acca at £5. The maths
+of that is harsh, and worth knowing exactly:
+
+- An acca's chance is the builders' chances multiplied, and so is the
+  bookmaker's margin. If each builder is priced 20% below fair (a typical
+  builder margin), a 10-game acca returns on average 0.8^10 ≈ 11% of the
+  stake: an expected loss of about £4.45 per £5 acca. A 4-game acca at the
+  same margin returns about 41%.
+- So a long acca only makes sense when most of its builders are priced
+  *above* the model's fair odds. `plbet acca` names the builders priced
+  below fair and shows the acca without them. Dropping them is the single
+  biggest thing that improves the expected return.
+- **Offers are the most dependable edge a recreational bettor has.** A free
+  £2 builder is worth roughly £1–£2 of real money; acca insurance (stake
+  back as a free bet if one leg loses) and winnings boosts can turn a slightly
+  negative acca positive. `plbet acca --boost 0.25 --insurance` and
+  `--free-bet` price them in. Use every free bet on the builder with the
+  highest *chance × (odds − 1)*, not the safest one.
+- Fewer, better legs beat more legs: the same £5 on a 3–4 game acca of
+  value builders has a far better expected return than a 10-game acca, and
+  wins often enough to tell within a season whether the edge is real.
+
+## 8. A word on the house edge
 
 Bookmakers build a margin into every price: around 5% on match results,
 10–15% on player markets, and often 20–30% or more on bet builders. Most

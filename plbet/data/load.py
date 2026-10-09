@@ -13,6 +13,8 @@ player_matches()   one row per player per match (Understat): minutes, goals,
 shots()            every Understat shot
 fpl_players()      current FPL squad list with availability news
 fpl_fixtures()     current-season fixture list with kickoff times
+espn_players()     one row per player per cup, European or international match
+espn_teams()       one row per team per such match (score, box score)
 """
 
 from __future__ import annotations
@@ -53,7 +55,7 @@ def sync_data(dest: Path | None = None) -> Path:
         dest.parent.mkdir(parents=True, exist_ok=True)
         run(["git", "-C", str(REPO_ROOT), "worktree", "add", "--detach", "-f", str(dest),
              "origin/data"])
-    for fn in (matches, player_matches, shots, fpl_bootstrap, understat_league):
+    for fn in (matches, player_matches, shots, fpl_bootstrap, understat_league, _espn_records):
         fn.cache_clear()
     return dest
 
@@ -274,6 +276,104 @@ def player_matches() -> pd.DataFrame:
     df["npxg"] = df["xg"] - df["pen_xg"]
     df["np_goals"] = df["goals"] - df["pen_goals"]
     return df.sort_values(["date", "match_id", "h_a"]).reset_index(drop=True)
+
+
+# --------------------------------------------------------------------------
+# ESPN: cup, European and international games
+# --------------------------------------------------------------------------
+
+ESPN_COMP_NAMES = {
+    "uefa.champions": "Champions League", "uefa.europa": "Europa League",
+    "uefa.europa.conf": "Conference League", "eng.fa": "FA Cup",
+    "eng.league_cup": "EFL Cup", "eng.charity": "Community Shield",
+    "fifa.cwc": "Club World Cup",
+}
+# International competitions played mostly outside Europe: long trips back.
+LONG_HAUL = ("conmebol", "caf.", "afc.", "concacaf", "fifa.worldq.caf", "fifa.worldq.afc",
+             "fifa.worldq.conmebol", "fifa.worldq.concacaf")
+
+
+def espn_far_teams() -> set[str]:
+    """ESPN ids of national teams outside Europe (seen in another confederation's
+    competitions): their players travel far for international games."""
+    t = espn_teams()
+    far = t[~t["club"] & t["league"].str.startswith(LONG_HAUL)]
+    return set(far["team_id"].astype(str))
+
+
+def espn_is_club(league: str) -> bool:
+    return league in ESPN_COMP_NAMES
+
+
+@functools.lru_cache(maxsize=None)
+def _espn_records() -> tuple[pd.DataFrame, pd.DataFrame]:
+    import gzip
+    folder = data_dir() / "espn"
+    prow, trow = [], []
+    for path in sorted(folder.glob("*/*.jsonl.gz")):
+        with gzip.open(path, "rt", encoding="utf-8") as f:
+            for line in f:
+                rec = json.loads(line)
+                if "players" not in rec:      # early raw format: skip
+                    continue
+                base = {"league": rec["league"], "event": rec["event"], "date": rec["date"]}
+                teams = {t["id"]: t for t in rec.get("teams", [])}
+                for t in teams.values():
+                    opp = next((o for o in teams.values() if o["id"] != t["id"]), {})
+                    trow.append({**base, "team_id": t["id"], "team_espn": t.get("name"),
+                                 "opp_espn": opp.get("name"), "side": t.get("side"),
+                                 "neutral": rec.get("neutral"), "gf": t.get("score"),
+                                 "ga": opp.get("score"),
+                                 **{k: t.get(k) for k in ("corners", "shots", "sot", "fouls",
+                                                         "yellow", "red", "possession")}})
+                for pl in rec["players"]:
+                    t = teams.get(pl["team"], {})
+                    prow.append({**base, "espn_id": pl["id"], "player": pl["name"],
+                                 "team_id": pl["team"], "team_espn": t.get("name"),
+                                 **{k: pl.get(k) for k in ("starter", "minutes", "pos", "goals",
+                                                          "assists", "shots", "sot", "yellow",
+                                                          "red", "fouls")}})
+    cols_p = ["league", "event", "date", "espn_id", "player", "team_id", "team_espn", "starter",
+              "minutes"]
+    pdf = pd.DataFrame(prow) if prow else pd.DataFrame(columns=cols_p)
+    tdf = pd.DataFrame(trow) if trow else pd.DataFrame(columns=["league", "event", "date",
+                                                               "team_id", "team_espn"])
+    for df in (pdf, tdf):
+        df["date"] = pd.to_datetime(df["date"], utc=True).dt.tz_convert("Europe/London") \
+            .dt.tz_localize(None)
+        df["club"] = df["league"].map(espn_is_club).astype(bool)
+        df["competition"] = df["league"].map(ESPN_COMP_NAMES).fillna("International")
+        # Club names in the canonical form where they are English clubs.
+        df["team"] = [names.team(t) if c and isinstance(t, str) else t
+                      for t, c in zip(df["team_espn"], df["club"])]
+    tdf["opp"] = [names.team(t) if c and isinstance(t, str) else t
+                  for t, c in zip(tdf["opp_espn"], tdf["club"])]
+    return pdf, tdf
+
+
+def espn_upcoming() -> pd.DataFrame:
+    """Cup and European fixtures in the next ten days (as of the last download)."""
+    path = data_dir() / "espn" / "upcoming.json"
+    rows = []
+    for ev in json.loads(path.read_text()) if path.exists() else []:
+        for t in ev["teams"]:
+            opp = next((o["name"] for o in ev["teams"] if o is not t), None)
+            rows.append({"league": ev["league"], "date": ev["date"],
+                         "team": names.team(t["name"]) if t["name"] else None,
+                         "opp": names.team(opp) if opp else None, "side": t["side"]})
+    df = pd.DataFrame(rows, columns=["league", "date", "team", "opp", "side"])
+    df["date"] = pd.to_datetime(df["date"], utc=True).dt.tz_convert("Europe/London") \
+        .dt.tz_localize(None)
+    df["competition"] = df["league"].map(ESPN_COMP_NAMES)
+    return df.sort_values("date").reset_index(drop=True)
+
+
+def espn_players() -> pd.DataFrame:
+    return _espn_records()[0].copy()
+
+
+def espn_teams() -> pd.DataFrame:
+    return _espn_records()[1].copy()
 
 
 # --------------------------------------------------------------------------

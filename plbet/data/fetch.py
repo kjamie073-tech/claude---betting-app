@@ -10,6 +10,9 @@ Sources
 football-data.co.uk  results, shots, corners, fouls, cards, referee and odds
 Understat            team and player xG, player match stats, every shot
 Fantasy PL API       injury/availability news, minutes, set-piece takers
+ESPN                 other competitions: Champions/Europa/Conference League,
+                     FA Cup, EFL Cup and internationals (line-ups, minutes,
+                     player stats), for fixture congestion and player load
 
 Only ``requests`` and ``pandas`` are needed so the job stays light.
 """
@@ -36,6 +39,7 @@ UA = (
 FD_BASE = "https://www.football-data.co.uk"
 US_BASE = "https://understat.com"
 FPL_BASE = "https://fantasy.premierleague.com/api"
+ESPN_BASE = "https://site.api.espn.com/apis/site/v2/sports/soccer"
 
 
 def log(msg: str) -> None:
@@ -378,6 +382,279 @@ def fetch_fpl(out: Path) -> dict[str, Any]:
 
 
 # --------------------------------------------------------------------------
+# ESPN: other competitions
+# --------------------------------------------------------------------------
+
+# Competitions Premier League clubs and their players play besides the league.
+# An unknown slug just logs a failure; the rest carry on.
+ESPN_CLUB = ["uefa.champions", "uefa.europa", "uefa.europa.conf", "eng.fa",
+             "eng.league_cup", "eng.charity", "fifa.cwc"]
+ESPN_INTERNATIONAL = ["fifa.friendly", "uefa.nations", "uefa.euroq", "uefa.euro",
+                      "fifa.world", "fifa.worldq.uefa", "fifa.worldq.conmebol",
+                      "fifa.worldq.caf", "fifa.worldq.afc", "fifa.worldq.concacaf",
+                      "conmebol.america", "caf.nations", "concacaf.gold",
+                      "concacaf.nations.league", "afc.asian.cup"]
+ESPN_PLAYER_STATS = {"totalGoals": "goals", "goalAssists": "assists", "totalShots": "shots",
+                     "shotsOnTarget": "sot", "yellowCards": "yellow", "redCards": "red",
+                     "foulsCommitted": "fouls"}
+ESPN_TEAM_STATS = {"wonCorners": "corners", "totalShots": "shots", "shotsOnTarget": "sot",
+                   "foulsCommitted": "fouls", "yellowCards": "yellow", "redCards": "red",
+                   "possessionPct": "possession"}
+
+
+def _num(x) -> float | None:
+    try:
+        return float(x)
+    except (TypeError, ValueError):
+        return None
+
+
+def espn_compact(league: str, ev: dict, sm: dict) -> dict[str, Any]:
+    """The parts of an ESPN match summary the model uses, about 2 KB a match.
+
+    Players: starter, minutes (from substitutions, red cards and extra time),
+    goals, assists, shots, shots on target, cards, fouls. Teams: score and the
+    box score's corners, shots, cards, fouls and possession.
+    """
+    comp = (sm.get("header", {}).get("competitions") or [{}])[0]
+    teams = {}
+    for c in comp.get("competitors", []):
+        t = c.get("team", {})
+        teams[str(t.get("id"))] = {"id": str(t.get("id")), "name": t.get("displayName"),
+                                   "side": c.get("homeAway"), "score": _num(c.get("score"))}
+    keys = sm.get("keyEvents", []) or []
+    periods = max([(k.get("period") or {}).get("number", 0) for k in keys] + [2])
+    end = 120.0 if periods >= 3 else 90.0
+    on, off = {}, {}
+    for k in keys:
+        kind = (k.get("type") or {}).get("type", "")
+        minute = min(((k.get("clock") or {}).get("value") or 0.0) / 60.0, end)
+        ps = [str((p.get("athlete") or {}).get("id")) for p in k.get("participants", [])]
+        if kind == "substitution" and len(ps) >= 2:
+            on[ps[0]] = minute
+            off[ps[1]] = minute
+        elif "red" in kind and ps:
+            off.setdefault(ps[0], minute)
+    players = []
+    for side in sm.get("rosters", []) or []:
+        tid = str((side.get("team") or {}).get("id"))
+        for p in side.get("roster", []) or []:
+            a = p.get("athlete") or {}
+            pid = str(a.get("id"))
+            st = {s.get("name"): s.get("value") for s in p.get("stats", []) or []}
+            starter = bool(p.get("starter"))
+            if not starter and not p.get("subbedIn") and pid not in on:
+                continue
+            start = 0.0 if starter else on.get(pid, end)
+            stop = off.get(pid, end)
+            players.append({
+                "id": pid, "name": a.get("displayName"), "team": tid, "starter": starter,
+                "minutes": round(max(stop - start, 0.0), 1),
+                "pos": (p.get("position") or {}).get("abbreviation"),
+                **{v: st.get(k) for k, v in ESPN_PLAYER_STATS.items()},
+            })
+    for t in (sm.get("boxscore") or {}).get("teams", []) or []:
+        tid = str((t.get("team") or {}).get("id"))
+        st = {s.get("name"): _num(s.get("displayValue")) for s in t.get("statistics", []) or []}
+        if tid in teams:
+            teams[tid].update({v: st.get(k) for k, v in ESPN_TEAM_STATS.items()})
+    return {"league": league, "event": str(ev.get("id")),
+            "date": comp.get("date") or ev.get("date"), "name": ev.get("name"),
+            "season": (sm.get("header", {}).get("season") or {}).get("name"),
+            "neutral": comp.get("neutralSite"), "periods": periods,
+            "teams": list(teams.values()), "players": players}
+
+
+def _espn_dates(s: requests.Session, slug: str, season: int, today: dt.date) -> list[dt.date]:
+    """Days with matches in a competition's season (July to June), up to today.
+
+    The scoreboard rejects date ranges, but its ``calendar`` lists the days
+    that have matches. Falls back to every day if there is no calendar.
+    """
+    first, last = dt.date(season, 7, 1), min(today, dt.date(season + 1, 6, 30))
+    days: set[dt.date] = set()
+    # Early July can still return the previous season's calendar; mid-October
+    # is safely inside the season.
+    probes = [min(dt.date(season, 10, 15), today), first]
+    probe = probes[0]
+    for _ in range(6):
+        r = get(s, f"{ESPN_BASE}/{slug}/scoreboard?dates={probe:%Y%m%d}")
+        if r.status_code != 200:
+            raise requests.HTTPError(f"HTTP {r.status_code}: {r.text[:200]!r}")
+        cal = []
+        for lg in r.json().get("leagues", []) or []:
+            for c in lg.get("calendar", []) or []:
+                # Either match days ("2026-09-16T07:00Z") or rounds with a
+                # start and end date (possibly nested as entries).
+                if isinstance(c, str):
+                    cal.append((c, c))
+                elif isinstance(c, dict):
+                    ents = [e for e in c.get("entries", []) or [] if isinstance(e, dict)] or [c]
+                    cal += [(e.get("startDate") or e.get("value"),
+                             e.get("endDate") or e.get("startDate") or e.get("value"))
+                            for e in ents]
+        for a, b in cal:
+            try:
+                d0 = dt.date.fromisoformat(str(a)[:10])
+                d1 = dt.date.fromisoformat(str(b)[:10])
+            except ValueError:
+                continue
+            for i in range(min((d1 - d0).days, 400) + 1):
+                d = d0 + dt.timedelta(days=i)
+                if first <= d <= last:
+                    days.add(d)
+        if len(probes) > 1:
+            probe = probes.pop()
+            continue
+        later = [d for d in days if d > probe]
+        # A calendar may cover one stage only; ask again after its last day.
+        nxt = max(later) + dt.timedelta(days=1) if later else None
+        if nxt is None or nxt > last:
+            break
+        probe = nxt
+    # Calendars can lag behind: always look at the last ten days too.
+    for i in range(11):
+        d = today - dt.timedelta(days=i)
+        if first <= d <= last:
+            days.add(d)
+    if not days and not cal:
+        log(f"espn {slug} {season}: no calendar, checking every day")
+        days = {first + dt.timedelta(days=i) for i in range((last - first).days + 1)}
+    return sorted(days)
+
+
+def fetch_espn(out: Path, seasons: list[int], refresh_all: bool, max_matches: int,
+               minutes: float = 80.0) -> dict[str, Any]:
+    """Line-ups, minutes and stats from cup, European and international games.
+
+    One gzipped JSON-lines file per competition and month
+    (``espn/<slug>/<YYYY-MM>.jsonl.gz``), one compact match per line
+    (``espn_compact``). Days already stored are not fetched again unless
+    they are within the last four days (late corrections).
+    """
+    import gzip
+
+    folder = out / "espn"
+    s = make_session()
+    today = dt.date.today()
+    fetched, failures, comps_failed = 0, [], {}
+    # Stop in time to commit what was fetched (the job has a time limit);
+    # the next run carries on from the days already stored.
+    deadline = time.monotonic() + minutes * 60
+    for slug in ESPN_CLUB + ESPN_INTERNATIONAL:
+        for season in seasons:
+            if fetched >= max_matches or time.monotonic() > deadline:
+                break
+            done_path = folder / slug / f"days_{season}.json"
+            complete = folder / slug / f"complete_{season}"
+            if complete.exists() and not refresh_all:
+                continue                     # finished season, fully stored
+            done_days = set(json.loads(done_path.read_text())) \
+                if done_path.exists() and not refresh_all else set()
+            try:
+                days = _espn_dates(s, slug, season, today)
+            except Exception as exc:
+                comps_failed[slug] = f"{type(exc).__name__}: {exc}"[:200]
+                break
+            by_month: dict[str, dict[str, dict]] = {}
+            all_done = True
+            for day in days:
+                if fetched >= max_matches or time.monotonic() > deadline:
+                    all_done = False
+                    break
+                settled = day < today - dt.timedelta(days=4)
+                if day.isoformat() in done_days and settled:
+                    continue
+                month = f"{day:%Y-%m}"
+                if month not in by_month:
+                    path = folder / slug / f"{month}.jsonl.gz"
+                    by_month[month] = {}
+                    if path.exists() and not refresh_all:
+                        with gzip.open(path, "rt", encoding="utf-8") as f:
+                            for line in f:
+                                rec = json.loads(line)
+                                by_month[month][rec["event"]] = rec
+                try:
+                    r = get(s, f"{ESPN_BASE}/{slug}/scoreboard?dates={day:%Y%m%d}")
+                    r.raise_for_status()
+                    events = r.json().get("events", [])
+                except Exception as exc:
+                    failures.append(f"{slug} {day}: {exc}")
+                    all_done = False
+                    continue
+                ok = True
+                for ev in events:
+                    eid = str(ev.get("id"))
+                    completed = ((ev.get("status") or {}).get("type") or {}).get("completed")
+                    if not completed:
+                        ok = False
+                        continue
+                    if eid in by_month[month] and settled:
+                        continue
+                    try:
+                        sr = get(s, f"{ESPN_BASE}/{slug}/summary?event={eid}")
+                        sr.raise_for_status()
+                        by_month[month][eid] = espn_compact(slug, ev, sr.json())
+                        fetched += 1
+                    except Exception as exc:
+                        failures.append(f"{slug} {eid}: {exc}")
+                        ok = False
+                    time.sleep(0.05)
+                if ok and settled:
+                    done_days.add(day.isoformat())
+                else:
+                    all_done = False
+            for month, recs in by_month.items():
+                path = folder / slug / f"{month}.jsonl.gz"
+                path.parent.mkdir(parents=True, exist_ok=True)
+                with gzip.open(path, "wt", encoding="utf-8") as f:
+                    for rec in sorted(recs.values(), key=lambda r: r.get("date") or ""):
+                        f.write(json.dumps(rec, separators=(",", ":"), ensure_ascii=False))
+                        f.write("\n")
+            if days:
+                done_path.parent.mkdir(parents=True, exist_ok=True)
+                done_path.write_text(json.dumps(sorted(done_days)))
+            if all_done and not season_is_live(season):
+                complete.parent.mkdir(parents=True, exist_ok=True)
+                complete.write_text("")
+            n = sum(len(v) for v in by_month.values())
+            if by_month:
+                log(f"espn {slug} {season}: {len(days)} match days, {n} matches in "
+                    f"{len(by_month)} months touched")
+    # Cup and European fixtures in the next ten days: a big game midweek
+    # means rotation at the weekend.
+    upcoming = []
+    for slug in ESPN_CLUB:
+        if slug in comps_failed:
+            continue
+        for i in range(11):
+            day = today + dt.timedelta(days=i)
+            try:
+                r = get(s, f"{ESPN_BASE}/{slug}/scoreboard?dates={day:%Y%m%d}")
+                r.raise_for_status()
+            except Exception as exc:
+                failures.append(f"{slug} upcoming {day}: {exc}")
+                break
+            for ev in r.json().get("events", []):
+                comp = (ev.get("competitions") or [{}])[0]
+                upcoming.append({
+                    "league": slug, "event": str(ev.get("id")), "date": ev.get("date"),
+                    "teams": [{"name": (c.get("team") or {}).get("displayName"),
+                               "side": c.get("homeAway")} for c in comp.get("competitors", [])],
+                })
+    folder.mkdir(parents=True, exist_ok=True)
+    (folder / "upcoming.json").write_text(json.dumps(upcoming, ensure_ascii=False))
+    if time.monotonic() > deadline:
+        log("espn: stopped at the time limit; the next run continues")
+    log(f"espn: {fetched} matches fetched, {len(failures)} failures, "
+        f"competitions failed: {comps_failed}")
+    if fetched == 0 and len(comps_failed) == len(ESPN_CLUB + ESPN_INTERNATIONAL):
+        raise RuntimeError(f"every ESPN competition failed: {comps_failed}")
+    return {"matches_fetched": fetched, "failures": failures[:50],
+            "competitions_failed": comps_failed}
+
+
+# --------------------------------------------------------------------------
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -391,14 +668,18 @@ def main(argv: list[str] | None = None) -> int:
                    help="cap on Understat match pages per run")
     p.add_argument("--refresh-all", action="store_true",
                    help="re-download finished seasons too")
-    p.add_argument("--only", nargs="*", choices=["football-data", "understat", "fpl"],
+    p.add_argument("--espn-minutes", type=float, default=80.0,
+                   help="time budget for the ESPN download")
+    p.add_argument("--espn-from", type=int, default=2021,
+                   help="earliest season to fetch ESPN other-competition games for")
+    p.add_argument("--only", nargs="*", choices=["football-data", "understat", "fpl", "espn"],
                    help="limit to these sources")
     args = p.parse_args(argv)
 
     out: Path = args.out
     out.mkdir(parents=True, exist_ok=True)
     seasons = list(range(args.first_season, current_season() + 1))
-    sources = args.only or ["football-data", "understat", "fpl"]
+    sources = args.only or ["football-data", "understat", "fpl", "espn"]
 
     status_path = out / "status.json"
     status = json.loads(status_path.read_text()) if status_path.exists() else {}
@@ -412,6 +693,9 @@ def main(argv: list[str] | None = None) -> int:
             elif name == "understat":
                 info = fetch_understat(out, seasons, args.backfill_from, args.max_matches,
                                        args.refresh_all)
+            elif name == "espn":
+                info = fetch_espn(out, [y for y in seasons if y >= args.espn_from],
+                                  args.refresh_all, args.max_matches, args.espn_minutes)
             else:
                 info = fetch_fpl(out)
             status["sources"][name] = {"ok": True, "updated_at": started, **info}

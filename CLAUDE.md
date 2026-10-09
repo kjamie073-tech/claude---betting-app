@@ -39,8 +39,17 @@ Private files live in the project's shared folder, never in this public repo:
      of kick-off;
    - the referee (the Premier League announces appointments early in the
      week);
-   - anything else that changes the game: a manager change, a cup game
-     midweek, rotation, weather.
+   - **every competition, not just the league**: each team's last game and
+     next one (Champions/Europa/Conference League, FA Cup, EFL Cup), how many
+     days' rest, how much they rotated and who played 90. A side 3 days after
+     a European away game rotates more and its regulars play fewer minutes;
+     a big game straight after the weekend can mean rest *this* weekend;
+   - **international duty** (after an international break): who played, how
+     many minutes, who came back injured or late (long-haul trips back from
+     South America, Africa or Asia before an early Saturday kick-off matter
+     most). Treat it as a question of minutes and fitness: goals for a
+     country say little about league form;
+   - anything else that changes the game: a manager change, rotation, weather.
    Note each source; mention conflicts between sources in the report notes.
 3. **Write the match file.** `python -m plbet template HOME AWAY --out /mnt/project-files/betting/matches`
    then fill in kick-off, referee, the predicted XIs, anyone ruled out who is
@@ -53,6 +62,11 @@ Private files live in the project's shared folder, never in this public repo:
    - "Over 10.5 corners 1.90" → `corners:over:10.5`
    - "Rice to be carded 4.0" → `player:Declan Rice:card: 4.0`
    - a builder → `builders: [{legs: [...], odds: 6.5}]`
+   When the step-2 research says a starter is likely to be rested or come off
+   early (heavy midweek minutes, a late return from international duty, just
+   back from injury), use `minutes:` in the match file (e.g.
+   `minutes: {home: {"Bukayo Saka": 65}}`, expected minutes if he starts),
+   or leave him out of the XI if he is likely to be rested.
    Always include both sides of a market when J gives them (e.g. over and
    under): the model uses the 1X2 and over/under 2.5 prices, and any total
    corners or cards line, to anchor itself to the market.
@@ -60,6 +74,10 @@ Private files live in the project's shared folder, never in this public repo:
    yellow as 1 and a red as 2: `card_weights: [1, 2]`).
 4. **Run it.** `python -m plbet analyse <file> --out /mnt/project-files/betting/reports`
 5. **Sanity-check before replying.**
+   - Read the report's "Games in all competitions" section: short rest, a
+     cup or European game in the next few days, international minutes and
+     long trips home. Turn what matters into `minutes:` or XI changes in the
+     match file and run again (the model does not adjust for these by itself).
    - Do the projected/confirmed XIs look right? Players who moved clubs in the
      window or have no Premier League history are listed in the report notes;
      put the real XI in the match file if the projection is off.
@@ -81,6 +99,42 @@ Private files live in the project's shared folder, never in this public repo:
    Attach the full report (`attached_outputs`) rather than pasting it.
    If nothing clears the minimum edge, say "no bet" plainly. That is a
    correct and common answer.
+
+## J's usual bet: a bet builder acca
+
+J's normal bet is **one bet builder on every Premier League game of the round,
+all stacked into one accumulator** (Paddy Power: the acca price is the
+builders' prices multiplied), at a **fixed £5 stake** per acca. When J asks for
+"a bet builder for all the games":
+
+1. Do steps 1–3 above for each fixture (team news matters more here: one
+   wrong line-up sinks the whole acca). Match files go in the matches folder.
+2. `python -m plbet acca --gameweek N --matches /mnt/project-files/betting/matches --out /mnt/project-files/betting/reports`
+   picks a 3-leg builder per match (model chance 30–80%; change with
+   `--legs`, `--min-p`, `--max-p`), writes each match report and an
+   `<date>-acca.md` summary. Fixtures without a match file use the model
+   alone and are flagged. Specific files can be passed instead of `--gameweek`.
+3. Give J the builders (legs as they read in the bookmaker's builder), each
+   one's model chance and fair odds, and the acca's chance and fair odds.
+4. When J pastes the bookmaker's builder prices, put each in its match file
+   (`builders: [{legs: [...], odds: X}]`, the specs are listed in the acca
+   report) and run again, or pass the whole acca price with `--odds`. The
+   report then gives the edge and expected profit on £5, and names any
+   builder priced below fair that drags the acca down.
+5. **Ask J about this week's offers** (free bet builders, acca boosts, acca
+   insurance) and price them in: `--boost 0.25`, `--insurance`, `--free-bet`.
+   Offers are the most dependable edge J has (docs/STAKING.md section 7).
+   Use a free bet on the builder with the highest chance × (odds − 1).
+6. Be plain about what an acca is: chances multiply, so does bookmaker margin
+   (a 10-fold of ~45% builders is about 1 in 2,000; at a typical 20% builder
+   margin a 10-fold returns about 11p per £1 on average). If the acca's edge
+   is below 8%, say the staking plan would not back it, and recommend the
+   shorter acca without the negative-edge builders. J's goal is to win money,
+   so recommend the bet with the best expected return even when it is not
+   the 10-game acca, and say why. J's stake is fixed at £5; don't size it up.
+7. Log it as one row: `tracker add ... --type Acca --market Acca --stake 5
+   --odds <acca odds> --chance <acca chance> --match "GW N acca (10 games)"
+   --selection "<match: legs | match: legs ...>"`.
 
 ## Things to be honest about
 
@@ -105,6 +159,8 @@ docs/BACKTEST.md has the evidence; the points that matter when replying:
 - Corners/cards anchors use an even model/market split that has not been
   backtested (there is no free historical corners/cards odds data).
 - Player fouls, tackles and offsides are not modelled.
+- Cup, European and international games feed the workload notes only; the
+  ratings and player rates still come from league games.
 - Football-data.co.uk has no Pinnacle odds after part of 2025-26; Bet365's
   closing prices and the market-average closing prices are the sharp
   reference now.
@@ -134,6 +190,9 @@ and report ROI with `tracker summary <path>`.
 - `plbet/models/simulate.py` — the joint Monte Carlo simulator
 - `plbet/markets.py` — market specs evaluated on simulations
 - `plbet/builder.py` — builder pricing, leg relationships, suggestions
+- `plbet/acca.py` — one builder per match stacked into an acca
+- `plbet/workload.py` — games in all competitions, rest days, players' recent
+  minutes and international duty (ESPN data, `load.espn_*`)
 - `plbet/analysis.py` — puts it all together for one match
 - `plbet/report.py`, `plbet/team_stats.py` — the markdown report
 - `plbet/staking.py`, `plbet/tracker.py` — staking plan and Excel tracker

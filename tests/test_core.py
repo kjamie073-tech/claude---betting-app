@@ -265,3 +265,58 @@ def test_yellow_cards_go_to_different_players():
     assert (out.sum(axis=1) == np.minimum(counts, 6)).all()
     # the most card-prone player is booked most often
     assert out[:, 0].mean() > out[:, 1].mean() > out[:, 5].mean()
+
+
+def test_acca_multiplies_builders_and_flags_bad_legs():
+    from plbet.acca import AccaLeg, combine
+    legs = [AccaLeg("A v B", None, ["x"], ["x"], 0.5, 0.001, odds=2.2),
+            AccaLeg("C v D", None, ["y"], ["y"], 0.4, 0.001, odds=2.0)]
+    rep = combine(legs, stake=5)
+    assert rep.prob == pytest.approx(0.2)
+    assert rep.odds == pytest.approx(4.4)
+    assert rep.ev == pytest.approx(0.2 * 4.4 - 1)
+    assert rep.min_odds == pytest.approx(5 * 1.08)
+    assert any("C v D" in n for n in rep.notes)  # priced below fair: flagged
+    assert combine(legs, acca_odds="9/2").odds == pytest.approx(5.5)
+    unpriced = combine([AccaLeg("A v B", None, ["x"], ["x"], 0.5, 0.001)])
+    assert unpriced.odds is None and unpriced.ev is None
+
+
+def test_espn_compact_minutes_from_subs_and_red_cards():
+    from plbet.data.fetch import espn_compact
+    pl = lambda i, starter, sub=False: {"athlete": {"id": i, "displayName": f"P{i}"},
+                                        "starter": starter, "subbedIn": sub,
+                                        "stats": [{"name": "totalShots", "value": 2.0}]}
+    sm = {
+        "header": {"competitions": [{"date": "2026-09-30T19:00Z", "competitors": [
+            {"homeAway": "home", "score": "2", "team": {"id": "1", "displayName": "Arsenal"}},
+            {"homeAway": "away", "score": "1", "team": {"id": "2", "displayName": "Ajax"}}]}]},
+        "rosters": [{"team": {"id": "1"}, "roster": [pl("a", True), pl("b", True), pl("c", False, True),
+                                                     pl("d", False)]}],
+        "keyEvents": [
+            {"type": {"type": "substitution"}, "clock": {"value": 3900.0}, "period": {"number": 2},
+             "participants": [{"athlete": {"id": "c"}}, {"athlete": {"id": "b"}}]},
+            {"type": {"type": "red-card"}, "clock": {"value": 4800.0}, "period": {"number": 2},
+             "participants": [{"athlete": {"id": "a"}}]}],
+        "boxscore": {"teams": [{"team": {"id": "1"},
+                                "statistics": [{"name": "wonCorners", "displayValue": "6"}]}]},
+    }
+    rec = espn_compact("uefa.champions", {"id": 9, "name": "x"}, sm)
+    mins = {p["id"]: p["minutes"] for p in rec["players"]}
+    assert mins == {"a": 80.0, "b": 65.0, "c": 25.0}      # unused sub d left out
+    assert rec["players"][0]["shots"] == 2.0
+    assert rec["teams"][0]["corners"] == 6.0 and rec["teams"][0]["score"] == 2.0
+
+
+def test_acca_offers():
+    from plbet.acca import AccaLeg, Promo, combine
+    legs = [AccaLeg(f"M{i}", None, ["x"], ["x"], 0.5, 0.001, odds=1.8) for i in range(3)]
+    plain = combine(legs)
+    assert plain.ev == pytest.approx(0.125 * 1.8 ** 3 - 1)
+    boosted = combine(legs, promo=Promo(boost=0.5))
+    assert boosted.paid_odds == pytest.approx(1 + (1.8 ** 3 - 1) * 1.5)
+    ins = combine(legs, promo=Promo(insurance=True))
+    assert ins.p_one_miss == pytest.approx(3 * 0.5 ** 3)
+    assert ins.promo_ev == pytest.approx(plain.ev + 0.375 * 0.7)
+    free = combine(legs, promo=Promo(free_bet=True))
+    assert free.promo_ev == pytest.approx(0.125 * (1.8 ** 3 - 1))
