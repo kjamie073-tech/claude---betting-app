@@ -481,18 +481,25 @@ def _espn_dates(s: requests.Session, slug: str, season: int, today: dt.date) -> 
         cal = []
         for lg in r.json().get("leagues", []) or []:
             for c in lg.get("calendar", []) or []:
+                # Either match days ("2026-09-16T07:00Z") or rounds with a
+                # start and end date (possibly nested as entries).
                 if isinstance(c, str):
-                    cal.append(c)
+                    cal.append((c, c))
                 elif isinstance(c, dict):
-                    cal += [e.get("startDate") for e in c.get("entries", []) or []
-                            if isinstance(e, dict)] or [c.get("startDate") or c.get("value")]
-        for c in cal:
+                    ents = [e for e in c.get("entries", []) or [] if isinstance(e, dict)] or [c]
+                    cal += [(e.get("startDate") or e.get("value"),
+                             e.get("endDate") or e.get("startDate") or e.get("value"))
+                            for e in ents]
+        for a, b in cal:
             try:
-                d = dt.date.fromisoformat(str(c)[:10])
+                d0 = dt.date.fromisoformat(str(a)[:10])
+                d1 = dt.date.fromisoformat(str(b)[:10])
             except ValueError:
                 continue
-            if first <= d <= last:
-                days.add(d)
+            for i in range(min((d1 - d0).days, 400) + 1):
+                d = d0 + dt.timedelta(days=i)
+                if first <= d <= last:
+                    days.add(d)
         later = [d for d in days if d > probe]
         # A calendar may cover one stage only; ask again after its last day.
         nxt = max(later) + dt.timedelta(days=1) if later else None
