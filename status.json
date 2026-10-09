@@ -39,11 +39,12 @@
       "failures": []
     },
     "espn": {
-      "ok": false,
-      "failed_at": "2026-10-09T22:19:38+00:00",
-      "error": "RuntimeError: every ESPN competition failed: {'uefa.champions': 'HTTPError: HTTP 400', 'uefa.europa': 'HTTPError: HTTP 400', 'uefa.europa.conf': 'HTTPError: HTTP 400', 'eng.fa': 'HTTPError: HTTP 400', 'eng.league_cup': 'HTTPError: HTTP 400', 'eng.charity': 'HTTPError: HTTP 400', 'fifa.cwc': 'HTTPError: HTTP 400', 'fifa.friendly': 'HTTPError: HTTP 400', 'uefa.nations': 'HTTPError: HTTP 400', 'uefa.euroq': 'HTTPError: HTTP 400', 'uefa.euro': 'HTTPError: HTTP 400', 'fifa.world': 'HTTPError: HTTP 40",
-      "last_success": null
+      "ok": true,
+      "updated_at": "2026-10-09T22:21:06+00:00",
+      "matches_fetched": 22,
+      "failures": [],
+      "competitions_failed": {}
     }
   },
-  "updated_at": "2026-10-09T22:19:49+00:00"
+  "updated_at": "2026-10-09T22:21:14+00:00"
 }
