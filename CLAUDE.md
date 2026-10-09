@@ -95,8 +95,10 @@ docs/BACKTEST.md has the evidence; the points that matter when replying:
 - Corners, cards, shots, fouls and player markets are well calibrated on
   held-out seasons, but nothing proves the model beats bookmakers' prop or
   builder prices: there is no free history of those prices.
-- Be wary of very confident corner legs (80%+): on the held-out seasons they
-  came in less often than the model said.
+- Be wary of very confident corner legs (80%+) and of 2+ shots on target
+  for the leading shooters: on the held-out seasons both came in less often
+  than the model said (2+ on target about a fifth less often for players it
+  gave 20–40%).
 - Referees new to the Premier League are treated as average; in the backtest
   they gave about 10% more yellows and fouls (small sample). Say so when the
   referee is new.

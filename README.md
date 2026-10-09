@@ -35,7 +35,8 @@ of 2026-27 held out from all tuning. Details in
   it the 1X2 and over/under odds, it leans 75% on them.
 - **Corners, cards, shots, fouls and player markets are well calibrated** on
   the held-out seasons: when the model says 30%, it happens about 30% of
-  the time. Its most confident corner calls (80%+) were the weak spot.
+  the time. The weak spots were its most confident corner calls (80%+)
+  and the leading shooters' shots-on-target chances, which ran high.
 - **Bet builders are priced as a whole match, not leg by leg.** "Over 2.5
   goals and both teams to score" happened in 45% of matches; the joint
   simulation said 45%, multiplying the two legs' chances says 32%.

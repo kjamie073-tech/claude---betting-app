@@ -35,8 +35,10 @@ and `python -m plbet backtest full` (about 20 minutes on four cores).
 - **Corners, cards, shots and fouls are well calibrated**, and the model
   knows something about each match beyond the base rate (1–11% skill),
   most for team shots and fouls and least for total corners.
-- **Player markets are well calibrated** after two fixes the backtest found
-  (section 4), with 2–7% skill over position averages.
+- **Player markets are well calibrated** after three fixes the backtests
+  found (section 4), with 1–7% skill over position averages. The exception:
+  on the held-out seasons the leading shooters' shots-on-target chances ran
+  high.
 - **Bet builder chances from the joint simulation are right**, and much
   better than multiplying the legs: "over 2.5 goals and both teams to score"
   happened 45% of the time; the joint model said 45%, multiplying the legs
@@ -245,7 +247,7 @@ player's position.
 | 3+ shots | 9451 | 11.6% | 11.8% | +7.4% |
 | 1+ shots on target | 9451 | 25.6% | 24.7% | +3.5% |
 | 2+ shots on target | 9451 | 6.2% | 5.4% | +5.1% |
-| Booked | 9451 | 15.1% | 15.0% | +1.6% |
+| Booked | 9451 | 15.1% | 15.0% | +1.4% |
 
 Calibration, anytime scorer (held out):
 
@@ -287,15 +289,24 @@ Calibration, 1+ shots on target (held out):
 | 60–70% | 366 | 64.0% | 59.6% | 2.5% |
 | 70–80% | 89 | 73.5% | 73.0% | 4.7% |
 
+Calibration, 2+ shots on target (held out):
+
+| Model said | Bets | Average model chance | Happened | ± (1 s.e.) |
+|---|---:|---:|---:|---:|
+| 0–5% | 6140 | 1.5% | 1.5% | 0.2% |
+| 5–10% | 1113 | 7.2% | 7.0% | 0.8% |
+| 10–20% | 1436 | 14.6% | 12.7% | 0.9% |
+| 20–30% | 572 | 23.9% | 18.9% | 1.8% |
+| 30–40% | 156 | 33.9% | 25.6% | 3.8% |
+
 Calibration, booked (held out):
 
 | Model said | Bets | Average model chance | Happened | ± (1 s.e.) |
 |---|---:|---:|---:|---:|
-| 0–5% | 226 | 3.8% | 3.1% | 1.3% |
-| 5–10% | 1526 | 7.9% | 8.7% | 0.7% |
-| 10–20% | 5965 | 14.8% | 14.7% | 0.5% |
-| 20–30% | 1660 | 23.1% | 23.5% | 1.0% |
-| 30–40% | 74 | 32.0% | 17.6% | 5.4% |
+| 0–5% | 118 | 4.3% | 4.2% | 1.9% |
+| 5–10% | 1279 | 8.0% | 7.7% | 0.8% |
+| 10–20% | 6604 | 14.9% | 14.5% | 0.4% |
+| 20–30% | 1433 | 22.7% | 24.4% | 1.1% |
 
 Three problems the first backtests found, all fixed:
 
@@ -314,7 +325,11 @@ Three problems the first backtests found, all fixed:
   share said, and the least card-prone about 10% more often. Their rates
   are now pulled harder towards the average for their position (a prior
   worth 3,600 minutes instead of 1,200), which brings every group within
-  about 10%. CARD_FIX_RESULT
+  about 10%. Before the change, the model's booking calls of 30% or more
+  (436 player-matches) came in 25% of the time, and 18% on the held-out
+  seasons; after it, its 30%+ calls (140) came in 32% of the time against
+  32% predicted. The price is a little sharpness: skill on the booked market
+  fell from +1.6% to +1.4%.
 
 ## 5. Bet builders: joint simulation against multiplying the legs
 
@@ -336,8 +351,11 @@ likeliest scorer" is the team's starter with the highest scoring chance.
 
 Linked legs (a team winning and its main striker scoring, goals and both
 teams scoring) are priced far better jointly. Where legs are close to
-independent (a win and the corner count), the two methods agree. The joint
-model's log loss over all of these builders was 0.5106 against 0.5193 for multiplying the legs (0.4945 against 0.5025 on the held-out seasons).
+independent (a win and the corner count), the two methods agree. The one
+builder the joint model priced clearly short was both teams scoring with over
+3.5 cards (32% against 35%): open games bring a few more cards than the model
+links to them, so that pairing is slightly better than the model says. The
+joint model's log loss over all of these builders was 0.5106 against 0.5193 for multiplying the legs (0.4945 against 0.5025 on the held-out seasons).
 
 ## 6. Line-ups and injuries
 
@@ -383,8 +401,11 @@ seasons.
   are honest estimates: on seasons it was not tuned on, its 30% calls
   happened about 30% of the time. That is the foundation for finding value,
   not proof of it.
-- Its weakest spots are its most confident calls on corners (80%+) and
-  REPLACE_WEAK_SPOTS. Treat an "edge" there with suspicion.
+- Its weakest spots on the held-out seasons were its most confident corner
+  calls (80%+) and the leading shooters: players it gave a 20–40% chance of
+  2+ shots on target managed it about a fifth less often, and its 30–40%
+  scorer calls came in at 29%. Both were fine on 2022-23 to 2024-25, but
+  treat an "edge" there with suspicion.
 - Bookmakers build much bigger margins into player props and builders than
   into the match result. An edge only exists where a price is wrong by more
   than that margin, which is why the staking plan requires 5% (player
