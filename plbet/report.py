@@ -126,7 +126,7 @@ def render(r: AnalysisResult, out_dir: str | Path | None = None) -> str:
     for side, team in (("h", home), ("a", away)):
         games, wnotes = r.workload.get(side, ([], []))
         lines.append(f"**{team}** — last games: " + ("; ".join(games) if games else
-                                                    "none in the last 3 weeks") + ".\n")
+                                                    "none in the last 6 weeks") + ".\n")
         for n in wnotes:
             lines.append(f"- {n}")
         lines.append("")

@@ -70,14 +70,16 @@ def appearances(as_of: pd.Timestamp, days: int = 45) -> pd.DataFrame:
     rows = [pd.DataFrame({"player_id": pl["player_id"], "player": pl["player"],
                           "date": pl["date"], "competition": "Premier League",
                           "league": "eng.1", "team": pl["team"], "minutes": pl["minutes"],
-                          "starter": pl["started"], "club": True})]
+                          "starter": pl["started"], "club": True, "far": False})]
     ep = load.espn_players()
     if not ep.empty:
         e = ep[(ep["date"] >= lo) & (ep["date"] < as_of)].copy()
         e["player_id"] = e["espn_id"].map(_links())
         e = e.dropna(subset=["player_id"])
+        far = load.espn_far_teams()
+        e["far"] = ~e["club"] & e["team_id"].astype(str).isin(far)
         rows.append(e[["player_id", "player", "date", "competition", "league", "team",
-                       "minutes", "starter", "club"]])
+                       "minutes", "starter", "club", "far"]])
     out = pd.concat(rows, ignore_index=True)
     # Understat dates carry no kick-off time; ESPN's do. Compare by day.
     out["day"] = out["date"].dt.normalize()
@@ -140,7 +142,7 @@ def player_load(player_ids, kickoff: pd.Timestamp) -> pd.DataFrame:
             "intl_games": int(len(intl)),
             "intl_min": float(intl["minutes"].sum()),
             "intl_last": intl["date"].max() if len(intl) else pd.NaT,
-            "long_haul": bool(len(intl) and intl["league"].str.startswith(load.LONG_HAUL).any()),
+            "long_haul": bool(len(intl) and intl["far"].astype(bool).any()),
         })
     cols = ["player_id", "min_4d", "min_8d", "games_8d", "last_date", "last_comp", "last_min",
             "intl_games", "intl_min", "intl_last", "long_haul"]
@@ -149,7 +151,7 @@ def player_load(player_ids, kickoff: pd.Timestamp) -> pd.DataFrame:
 
 def describe(team: str, squad: pd.DataFrame, kickoff: pd.Timestamp) -> tuple[list[str], list[str]]:
     """Report lines: the team's recent games, and load notes for its XI."""
-    sched = team_schedule(team, kickoff, days=21)
+    sched = team_schedule(team, kickoff, days=45)
     games = [f"{r.date:%a %d %b} {r.competition} {r.venue} v {r.opponent} {r.score}".rstrip()
              for r in sched.itertuples()][-4:]
     notes = []

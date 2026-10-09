@@ -293,6 +293,14 @@ LONG_HAUL = ("conmebol", "caf.", "afc.", "concacaf", "fifa.worldq.caf", "fifa.wo
              "fifa.worldq.conmebol", "fifa.worldq.concacaf")
 
 
+def espn_far_teams() -> set[str]:
+    """ESPN ids of national teams outside Europe (seen in another confederation's
+    competitions): their players travel far for international games."""
+    t = espn_teams()
+    far = t[~t["club"] & t["league"].str.startswith(LONG_HAUL)]
+    return set(far["team_id"].astype(str))
+
+
 def espn_is_club(league: str) -> bool:
     return league in ESPN_COMP_NAMES
 
