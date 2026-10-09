@@ -40,6 +40,8 @@ FD_BASE = "https://www.football-data.co.uk"
 US_BASE = "https://understat.com"
 FPL_BASE = "https://fantasy.premierleague.com/api"
 ESPN_BASE = "https://site.api.espn.com/apis/site/v2/sports/soccer"
+SOFA_BASE = "https://api.sofascore.com/api/v1"
+SOFA_PL = 17          # SofaScore's id for the Premier League
 
 
 def log(msg: str) -> None:
@@ -655,6 +657,71 @@ def fetch_espn(out: Path, seasons: list[int], refresh_all: bool, max_matches: in
 
 
 # --------------------------------------------------------------------------
+# SofaScore: line-ups (predicted, then confirmed) and missing players
+# --------------------------------------------------------------------------
+
+
+def fetch_sofascore(out: Path, days: int = 4) -> dict[str, Any]:
+    """Premier League matches in the next ``days`` days: line-ups (SofaScore's
+    predicted XI until the teams are announced, then the confirmed XI, with
+    a ``confirmed`` flag), missing players with reasons, and the referee.
+
+    Written to ``sofascore/lineups.json`` (one entry per match). Run the
+    workflow with only=sofascore about an hour before kick-off for confirmed
+    line-ups.
+    """
+    s = make_session()
+    s.headers.update({"Accept": "application/json", "Referer": "https://www.sofascore.com/"})
+    today = dt.date.today()
+    matches, failures = [], []
+    for i in range(days):
+        day = today + dt.timedelta(days=i)
+        r = get(s, f"{SOFA_BASE}/sport/football/scheduled-events/{day:%Y-%m-%d}")
+        if r.status_code != 200:
+            raise requests.HTTPError(f"scheduled-events HTTP {r.status_code}: {r.text[:200]!r}")
+        for ev in r.json().get("events", []):
+            ut = ((ev.get("tournament") or {}).get("uniqueTournament") or {}).get("id")
+            if ut != SOFA_PL:
+                continue
+            eid = ev.get("id")
+            rec = {"event": eid, "start": ev.get("startTimestamp"),
+                   "home": (ev.get("homeTeam") or {}).get("name"),
+                   "away": (ev.get("awayTeam") or {}).get("name")}
+            try:
+                lr = get(s, f"{SOFA_BASE}/event/{eid}/lineups")
+                if lr.status_code == 200:
+                    lj = lr.json()
+                    rec["confirmed"] = bool(lj.get("confirmed"))
+                    for side in ("home", "away"):
+                        t = lj.get(side) or {}
+                        rec[f"{side}_formation"] = t.get("formation")
+                        rec[f"{side}_xi"] = [((p.get("player") or {}).get("name"))
+                                             for p in t.get("players", []) if not p.get("substitute")]
+                        rec[f"{side}_bench"] = [((p.get("player") or {}).get("name"))
+                                                for p in t.get("players", []) if p.get("substitute")]
+                        rec[f"{side}_missing"] = [
+                            {"name": (m.get("player") or {}).get("name"), "type": m.get("type"),
+                             "reason": m.get("description") or m.get("reason")}
+                            for m in t.get("missingPlayers", []) or []]
+                else:
+                    rec["lineups_status"] = lr.status_code
+                er = get(s, f"{SOFA_BASE}/event/{eid}")
+                if er.status_code == 200:
+                    ref = (er.json().get("event") or {}).get("referee") or {}
+                    rec["referee"] = ref.get("name")
+            except Exception as exc:
+                failures.append(f"{eid}: {exc}")
+            matches.append(rec)
+            time.sleep(0.3)
+    folder = out / "sofascore"
+    folder.mkdir(parents=True, exist_ok=True)
+    (folder / "lineups.json").write_text(json.dumps(matches, indent=1, ensure_ascii=False))
+    log(f"sofascore: {len(matches)} Premier League matches, "
+        f"{sum(bool(m.get('confirmed')) for m in matches)} with confirmed line-ups")
+    return {"matches": len(matches), "failures": failures[:20]}
+
+
+# --------------------------------------------------------------------------
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -672,14 +739,15 @@ def main(argv: list[str] | None = None) -> int:
                    help="time budget for the ESPN download")
     p.add_argument("--espn-from", type=int, default=2021,
                    help="earliest season to fetch ESPN other-competition games for")
-    p.add_argument("--only", nargs="*", choices=["football-data", "understat", "fpl", "espn"],
+    p.add_argument("--only", nargs="*", choices=["football-data", "understat", "fpl", "espn",
+                            "sofascore"],
                    help="limit to these sources")
     args = p.parse_args(argv)
 
     out: Path = args.out
     out.mkdir(parents=True, exist_ok=True)
     seasons = list(range(args.first_season, current_season() + 1))
-    sources = args.only or ["football-data", "understat", "fpl", "espn"]
+    sources = args.only or ["football-data", "understat", "fpl", "espn", "sofascore"]
 
     status_path = out / "status.json"
     status = json.loads(status_path.read_text()) if status_path.exists() else {}
@@ -693,6 +761,8 @@ def main(argv: list[str] | None = None) -> int:
             elif name == "understat":
                 info = fetch_understat(out, seasons, args.backfill_from, args.max_matches,
                                        args.refresh_all)
+            elif name == "sofascore":
+                info = fetch_sofascore(out)
             elif name == "espn":
                 info = fetch_espn(out, [y for y in seasons if y >= args.espn_from],
                                   args.refresh_all, args.max_matches, args.espn_minutes)
