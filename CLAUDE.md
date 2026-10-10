@@ -39,8 +39,16 @@ Private files live in the project's shared folder, never in this public repo:
      of kick-off;
    - the referee (the Premier League announces appointments early in the
      week);
-   - anything else that changes the game: a manager change, a cup game
-     midweek, rotation, weather.
+   - fixture congestion, for both teams: Champions League, Europa,
+     Conference League, FA Cup and EFL Cup games in the 4 days before or
+     after, and international breaks (who was called up, who played 90
+     minutes in both games, long-haul travel such as South America, who came
+     home early injured). Rotation risk goes in the XI; a key player likely
+     to be rested or subbed early stays out of player legs. The model does
+     not know about these games yet (its data is Premier League only), so
+     say in the reply what you found and how it changed the builder;
+   - anything else that changes the game: a manager change, rotation,
+     weather.
    Note each source; mention conflicts between sources in the report notes.
 3. **Write the match file.** `python -m plbet template HOME AWAY --out /mnt/project-files/betting/matches`
    then fill in kick-off, referee, the predicted XIs, anyone ruled out who is
