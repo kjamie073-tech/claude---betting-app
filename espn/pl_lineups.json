@@ -90,8 +90,8 @@
   "home_formation": "4-2-3-1",
   "away_xi": [
    "Caoimhín Kelleher",
-   "Jannik Schuster",
    "Kristoffer Ajer",
+   "Jannik Schuster",
    "El Hadji Malick Diouf",
    "Michael Kayode",
    "Keane Lewis-Potter",
@@ -123,16 +123,16 @@
   "confirmed": true,
   "home_xi": [
    "Emiliano Martínez",
+   "Maxence Lacroix",
    "Levi Colwill",
    "Josh Acheampong",
-   "Maxence Lacroix",
-   "Jordan Henderson",
-   "Pedro Neto",
-   "Pep Chavarría",
    "Moisés Caicedo",
+   "Jordan Henderson",
+   "Pep Chavarría",
+   "Pedro Neto",
+   "João Pedro",
    "Morgan Rogers",
-   "Cole Palmer",
-   "João Pedro"
+   "Cole Palmer"
   ],
   "home_bench": [
    "Mike Penders",
@@ -145,19 +145,19 @@
    "Wesley Fofana",
    "Estêvão"
   ],
-  "home_formation": "3-4-3",
+  "home_formation": "3-4-2-1",
   "away_xi": [
    "Djordje Petrovic",
-   "Adam Smith",
-   "James Hill",
    "António Silva",
+   "James Hill",
    "Adrien Truffert",
-   "Ryan Christie",
+   "Adam Smith",
    "Rayan",
-   "David Brooks",
+   "Ryan Christie",
    "Tyler Adams",
+   "Evanilson",
    "Marcus Tavernier",
-   "Evanilson"
+   "David Brooks"
   ],
   "away_bench": [
    "Juanlu Sanchez",
@@ -181,16 +181,16 @@
   "confirmed": true,
   "home_xi": [
    "Christian Walton",
-   "Leif Davis",
-   "Issa Diop",
-   "Abdoul Ouattara",
    "Dara O'Shea",
+   "Issa Diop",
+   "Leif Davis",
+   "Abdoul Ouattara",
    "Julio Enciso",
-   "Sasa Lukic",
-   "Jaden Philogene",
-   "Daizen Maeda",
    "Florentino",
-   "Emersonn"
+   "Sasa Lukic",
+   "Emersonn",
+   "Jaden Philogene",
+   "Daizen Maeda"
   ],
   "home_bench": [
    "Azor Matusiwa",
@@ -206,16 +206,16 @@
   "home_formation": "4-2-3-1",
   "away_xi": [
    "Bernd Leno",
-   "David Affengruber",
    "Calvin Bassey",
+   "David Affengruber",
    "Ryan Sessegnon",
    "Kenny Tete",
-   "Alex Iwobi",
-   "Oscar Bobb",
-   "Sander Berge",
    "Josh King",
    "Shea Charles",
-   "Gonzalo García"
+   "Sander Berge",
+   "Gonzalo García",
+   "Alex Iwobi",
+   "Oscar Bobb"
   ],
   "away_bench": [
    "Benjamin Lecomte",
@@ -239,16 +239,16 @@
   "confirmed": true,
   "home_xi": [
    "Robin Roefs",
-   "Trai Hume",
-   "Nordi Mukiele",
    "Kevin Danso",
+   "Nordi Mukiele",
    "Reinildo Mandava",
+   "Trai Hume",
    "Enzo Le Fée",
-   "Thomas Meunier",
    "Noah Sadiki",
    "Granit Xhaka",
+   "Wilson Isidor",
    "Nilson Angulo",
-   "Wilson Isidor"
+   "Thomas Meunier"
   ],
   "home_bench": [
    "Omar Alderete",
@@ -264,16 +264,16 @@
   "home_formation": "4-2-3-1",
   "away_xi": [
    "Bart Verbruggen",
-   "Luka Vuskovic",
    "Pascal Struijk",
-   "Ferdi Kadioglu",
+   "Luka Vuskovic",
    "Olivier Boscagli",
-   "Chema Andrés",
-   "Diego Gómez",
+   "Ferdi Kadioglu",
    "Yasin Ayari",
+   "Chema Andrés",
    "Pascal Gross",
+   "Charalambos Kostoulas",
    "Maxim De Cuyper",
-   "Charalambos Kostoulas"
+   "Diego Gómez"
   ],
   "away_bench": [
    "Jason Steele",
@@ -294,7 +294,57 @@
   "date": "2026-10-10T16:30Z",
   "home": "Manchester United",
   "away": "Tottenham Hotspur",
-  "confirmed": false,
+  "confirmed": true,
+  "home_xi": [
+   "Senne Lammens",
+   "Harry Maguire",
+   "Leny Yoro",
+   "Luke Shaw",
+   "Lisandro Martínez",
+   "Kobbie Mainoo",
+   "Youri Tielemans",
+   "Bruno Fernandes",
+   "Amad Diallo",
+   "Bryan Mbeumo",
+   "Matheus Cunha"
+  ],
+  "home_bench": [
+   "Ayden Heaven",
+   "Mason Mount",
+   "Marcus Rashford",
+   "Carlos Baleba",
+   "Joshua Zirkzee",
+   "Diogo Dalot",
+   "Karl Darlow",
+   "Shea Lacey",
+   "Andrey Santos"
+  ],
+  "home_formation": "4-2-3-1",
+  "away_xi": [
+   "Antonín Kinsky",
+   "Marcos Senesi",
+   "Archie Gray",
+   "Jan Paul van Hecke",
+   "Destiny Udogie",
+   "Sávio",
+   "Mohammed Kudus",
+   "Sandro Tonali",
+   "Lucas Bergvall",
+   "Conor Gallagher",
+   "Dominic Solanke"
+  ],
+  "away_bench": [
+   "Ben Davies",
+   "James Maddison",
+   "Micky van de Ven",
+   "Tosin Adarabioyo",
+   "Martin Dúbravka",
+   "Omar Marmoush",
+   "Rodrigo Bentancur",
+   "Mateus Fernandes",
+   "Mathys Tel"
+  ],
+  "away_formation": "4-2-3-1",
   "referee": null
  },
  {
