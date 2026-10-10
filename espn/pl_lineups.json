@@ -4,7 +4,57 @@
   "date": "2026-10-10T11:30Z",
   "home": "Arsenal",
   "away": "Leeds United",
-  "confirmed": false,
+  "confirmed": true,
+  "home_xi": [
+   "David Raya",
+   "Gabriel Magalhães",
+   "Riccardo Calafiori",
+   "Ben White",
+   "Ezri Konsa",
+   "Myles Lewis-Skelly",
+   "Declan Rice",
+   "Bukayo Saka",
+   "Martin Ødegaard",
+   "Noni Madueke",
+   "Kai Havertz"
+  ],
+  "home_bench": [
+   "Bruno Guimarães",
+   "Mikel Merino",
+   "Max Dowman",
+   "Martín Zubimendi",
+   "Viktor Gyökeres",
+   "Eberechi Eze",
+   "Jurriën Timber",
+   "Kepa Arrizabalaga",
+   "Piero Hincapié"
+  ],
+  "home_formation": "4-2-3-1",
+  "away_xi": [
+   "James Trafford",
+   "Nico Elvedi",
+   "Tarik Muharemovic",
+   "James Justin",
+   "Ethan Ampadu",
+   "Anton Stach",
+   "Ao Tanaka",
+   "Gabriel Gudmundsson",
+   "Noah Okafor",
+   "Jayden Bogle",
+   "Dominic Calvert-Lewin"
+  ],
+  "away_bench": [
+   "Jean-Mattéo Bahoya",
+   "Lukas Nmecha",
+   "Sean Longstaff",
+   "Michael Zetterer",
+   "Melvin Bard",
+   "Harry Wilson",
+   "Jaka Bijol",
+   "Brenden Aaronson",
+   "Ilia Gruev"
+  ],
+  "away_formation": "3-4-2-1",
   "referee": null
  },
  {
