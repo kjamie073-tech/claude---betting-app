@@ -158,14 +158,15 @@ def describe(team: str, squad: pd.DataFrame, kickoff: pd.Timestamp) -> tuple[lis
     rest = rest_days(team, kickoff)
     if rest is not None and rest <= 3:
         notes.append(f"{team} last played {rest:.0f} days before kick-off "
-                     f"({sched['competition'].iat[-1]}); expect some rotation.")
+                     f"({sched['competition'].iat[-1]}). Regulars usually still start (docs/BACKTEST.md "
+                     f"6b); check the predicted XI for rotation.")
     up = load.espn_upcoming()
     up = up[(up["team"] == team) & (up["date"] > kickoff)
             & (up["date"] <= kickoff + pd.Timedelta(days=5))]
     for r in up.head(1).itertuples():
         gap = (r.date.normalize() - kickoff.normalize()).days
         notes.append(f"{team} play {r.opp} in the {r.competition} {gap} days later "
-                     f"({r.date:%a %d %b}); key players may be rested or taken off early.")
+                     f"({r.date:%a %d %b}); check the predicted XI for anyone being saved for it.")
     xi = squad[squad["start"]] if "start" in squad else squad
     ld = player_load(xi.index, kickoff)
     for pid, r in ld.iterrows():

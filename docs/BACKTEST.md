@@ -393,6 +393,56 @@ seasons.
   0.05 on goals in 2021-25) but made the held-out forecasts worse, so the
   model treats goalkeepers like other defenders.
 
+## 6b. Fixture congestion and international duty
+
+Tested on 2021-22 to 2026-27 with every Champions, Europa and Conference
+League, FA Cup and EFL Cup match and the international qualifiers and
+Nations League games from ESPN (6,400 matches), linked to Premier League
+line-ups from Understat. "Regulars" started at least 7 of their team's
+previous 10 league games.
+
+**Team goals after short rest**, against the goals model and against Bet365's
+closing prices (goals scored / expected; ±3% is one standard error):
+
+| Before the league game | Team-matches | Scored v model | Conceded v model | Scored v market | Conceded v market |
+|---|---:|---:|---:|---:|---:|
+| 5+ days' rest | 2,399 | 1.00 | 0.99 | 1.00 | 0.98 |
+| ≤4 days after a league game | 807 | 1.02 | 1.01 | 1.02 | 1.01 |
+| ≤4 days after a cup or European game | 692 | 1.00 | 1.03 | 0.98 | 1.04 |
+
+No effect beyond noise, and none on rest advantage either: the market
+already prices congestion. **No adjustment is made.**
+
+**Regular starters after midweek club games** (minutes in a cup or
+European game in the 4 days before):
+
+| Midweek minutes | Player-matches | Started | Minutes when starting | Played 90 |
+|---|---:|---:|---:|---:|
+| none | 26,691 | 77% | 86 | 79% |
+| 1–45 | 835 | 83% | 86 | 75% |
+| 46–75 | 516 | 76% | 83 | 65% |
+| 76+ | 2,213 | 82% | 86 | 81% |
+
+Regulars who played the full midweek game start the weekend game *more*
+often, not less: managers keep their key players in. Only those taken off
+after 46–75 minutes midweek are subbed earlier at the weekend (65% play 90
+against 79%), a small group.
+
+**International duty** (qualifiers, Nations League and friendlies in the 12
+days before; tournaments excluded, since players at the Africa Cup of
+Nations or Asian Cup are simply absent and FPL lists them so):
+
+| Duty | Player-matches | Started | Minutes when starting | Played 90 |
+|---|---:|---:|---:|---:|
+| none | 28,550 | 77% | 86 | 79% |
+| Europe | 1,296 | 84% | 86 | 81% |
+| outside Europe (long trip back) | 409 | 77% | 85 | 75% |
+
+Long trips home cost about a minute and a few percent of full 90s, inside
+the noise; within 3 days of the trip, 74% started (42 cases). **No automatic
+adjustment**: the workload notes in each report remain, and specific news
+(a player flagged as tired or carrying a knock) goes into `minutes:` by hand.
+
 ## 7. What this means for betting
 
 - On result and goals, trust the bookmaker's price more than the model's;
