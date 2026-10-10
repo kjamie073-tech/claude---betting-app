@@ -655,6 +655,63 @@ def fetch_espn(out: Path, seasons: list[int], refresh_all: bool, max_matches: in
 
 
 # --------------------------------------------------------------------------
+# ESPN: Premier League line-ups and referees for the coming days
+# --------------------------------------------------------------------------
+
+
+def fetch_lineups(out: Path, days: int = 4) -> dict[str, Any]:
+    """Premier League matches in the next ``days`` days: the starting XIs and
+    benches once they are announced (about an hour before kick-off), and
+    the referee when ESPN lists the officials.
+
+    Written to ``espn/pl_lineups.json``. Run the workflow with only=lineups
+    shortly after the teams are announced.
+    """
+    s = make_session()
+    today = dt.date.today()
+    matches, failures = [], []
+    for i in range(days):
+        day = today + dt.timedelta(days=i)
+        r = get(s, f"{ESPN_BASE}/eng.1/scoreboard?dates={day:%Y%m%d}")
+        r.raise_for_status()
+        for ev in r.json().get("events", []):
+            comp = (ev.get("competitions") or [{}])[0]
+            teams = {c.get("homeAway"): (c.get("team") or {}).get("displayName")
+                     for c in comp.get("competitors", [])}
+            rec = {"event": str(ev.get("id")), "date": ev.get("date"),
+                   "home": teams.get("home"), "away": teams.get("away"), "confirmed": False}
+            try:
+                sm = get(s, f"{ESPN_BASE}/eng.1/summary?event={ev.get('id')}").json()
+                for side in sm.get("rosters", []) or []:
+                    key = side.get("homeAway")
+                    roster = side.get("roster", []) or []
+                    xi = [(p.get("athlete") or {}).get("displayName")
+                          for p in roster if p.get("starter")]
+                    if len(xi) == 11:
+                        rec["confirmed"] = True
+                        rec[f"{key}_xi"] = xi
+                        rec[f"{key}_bench"] = [(p.get("athlete") or {}).get("displayName")
+                                               for p in roster if not p.get("starter")]
+                        rec[f"{key}_formation"] = side.get("formation")
+                offs = (sm.get("gameInfo") or {}).get("officials", []) or []
+                ref = [o.get("displayName") or o.get("fullName") for o in offs
+                       if "referee" in str((o.get("position") or {}).get("name", "")).lower()
+                       or o.get("order") == 1]
+                rec["referee"] = ref[0] if ref else None
+            except Exception as exc:
+                failures.append(f"{ev.get('id')}: {exc}")
+            matches.append(rec)
+            time.sleep(0.1)
+    folder = out / "espn"
+    folder.mkdir(parents=True, exist_ok=True)
+    (folder / "pl_lineups.json").write_text(json.dumps(matches, indent=1, ensure_ascii=False))
+    log(f"lineups: {len(matches)} Premier League matches, "
+        f"{sum(m['confirmed'] for m in matches)} with confirmed line-ups")
+    return {"matches": len(matches), "confirmed": sum(m["confirmed"] for m in matches),
+            "failures": failures[:20]}
+
+
+# --------------------------------------------------------------------------
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -672,14 +729,15 @@ def main(argv: list[str] | None = None) -> int:
                    help="time budget for the ESPN download")
     p.add_argument("--espn-from", type=int, default=2021,
                    help="earliest season to fetch ESPN other-competition games for")
-    p.add_argument("--only", nargs="*", choices=["football-data", "understat", "fpl", "espn"],
+    p.add_argument("--only", nargs="*", choices=["football-data", "understat", "fpl", "espn",
+                            "lineups"],
                    help="limit to these sources")
     args = p.parse_args(argv)
 
     out: Path = args.out
     out.mkdir(parents=True, exist_ok=True)
     seasons = list(range(args.first_season, current_season() + 1))
-    sources = args.only or ["football-data", "understat", "fpl", "espn"]
+    sources = args.only or ["football-data", "understat", "fpl", "espn", "lineups"]
 
     status_path = out / "status.json"
     status = json.loads(status_path.read_text()) if status_path.exists() else {}
@@ -693,6 +751,8 @@ def main(argv: list[str] | None = None) -> int:
             elif name == "understat":
                 info = fetch_understat(out, seasons, args.backfill_from, args.max_matches,
                                        args.refresh_all)
+            elif name == "lineups":
+                info = fetch_lineups(out)
             elif name == "espn":
                 info = fetch_espn(out, [y for y in seasons if y >= args.espn_from],
                                   args.refresh_all, args.max_matches, args.espn_minutes)

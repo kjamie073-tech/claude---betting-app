@@ -41,16 +41,25 @@ Private files live in the project's shared folder, never in this public repo:
      week);
    - **every competition, not just the league**: each team's last game and
      next one (Champions/Europa/Conference League, FA Cup, EFL Cup), how many
-     days' rest, how much they rotated and who played 90. A side 3 days after
-     a European away game rotates more and its regulars play fewer minutes;
-     a big game straight after the weekend can mean rest *this* weekend;
+     days' rest, how much they rotated and who played 90. In the data,
+     regulars who played 90 midweek start at the weekend as often as anyone
+     (managers keep key players in) and short rest does not change goals
+     beyond what the bookmaker prices (docs/BACKTEST.md 6b), so only act on
+     specific news: a named player rested, flagged as tired, or managed;
    - **international duty** (after an international break): who played, how
      many minutes, who came back injured or late (long-haul trips back from
      South America, Africa or Asia before an early Saturday kick-off matter
-     most). Treat it as a question of minutes and fitness: goals for a
-     country say little about league form;
+     most). In the data, long trips home cost about a minute on average,
+     so act on specific news (a knock, a late return) rather than the trip
+     itself. Goals for a country say little about league form;
    - anything else that changes the game: a manager change, rotation, weather.
    Note each source; mention conflicts between sources in the report notes.
+   **Confirmed line-ups**: J likes SofaScore, but it blocks both this sandbox
+   and the data workflow (HTTP 403), so use ESPN instead: about an hour
+   before kick-off run `update-data.yml` with `{"only": "lineups"}`, `sync`,
+   and read `data/espn/pl_lineups.json` (starting XIs, benches and referees
+   for the next four days; `confirmed: true` once the teams are announced).
+   Put confirmed XIs in the match file and re-run.
 3. **Write the match file.** `python -m plbet template HOME AWAY --out /mnt/project-files/betting/matches`
    then fill in kick-off, referee, the predicted XIs, anyone ruled out who is
    not already in FPL's injury news, and J's odds. Map each pasted price to a
@@ -160,7 +169,9 @@ docs/BACKTEST.md has the evidence; the points that matter when replying:
   backtested (there is no free historical corners/cards odds data).
 - Player fouls, tackles and offsides are not modelled.
 - Cup, European and international games feed the workload notes only; the
-  ratings and player rates still come from league games.
+  ratings and player rates still come from league games. Tested: neither
+  midweek games nor international trips change regulars' starts or minutes
+  or teams' goals enough to adjust for (docs/BACKTEST.md 6b).
 - Football-data.co.uk has no Pinnacle odds after part of 2025-26; Bet365's
   closing prices and the market-average closing prices are the sharp
   reference now.
