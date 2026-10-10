@@ -40,8 +40,8 @@
     },
     "espn": {
       "ok": true,
-      "updated_at": "2026-10-09T22:31:59+00:00",
-      "matches_fetched": 6406,
+      "updated_at": "2026-10-09T23:59:57+00:00",
+      "matches_fetched": 202,
       "failures": [],
       "competitions_failed": {}
     },
@@ -50,7 +50,14 @@
       "failed_at": "2026-10-09T23:52:33+00:00",
       "error": "HTTPError: scheduled-events HTTP 403: '{\"error\": {\"code\": 403, \"reason\": \"Forbidden\" }}'",
       "last_success": null
+    },
+    "lineups": {
+      "ok": true,
+      "updated_at": "2026-10-09T23:59:55+00:00",
+      "matches": 10,
+      "confirmed": 0,
+      "failures": []
     }
   },
-  "updated_at": "2026-10-09T23:52:33+00:00"
+  "updated_at": "2026-10-10T00:04:55+00:00"
 }

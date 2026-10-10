@@ -1,0 +1,82 @@
+[
+ {
+  "event": "401879268",
+  "date": "2026-10-10T11:30Z",
+  "home": "Arsenal",
+  "away": "Leeds United",
+  "confirmed": false,
+  "referee": null
+ },
+ {
+  "event": "401878776",
+  "date": "2026-10-10T14:00Z",
+  "home": "Aston Villa",
+  "away": "Brentford",
+  "confirmed": false,
+  "referee": null
+ },
+ {
+  "event": "401878775",
+  "date": "2026-10-10T14:00Z",
+  "home": "Chelsea",
+  "away": "AFC Bournemouth",
+  "confirmed": false,
+  "referee": null
+ },
+ {
+  "event": "401879265",
+  "date": "2026-10-10T14:00Z",
+  "home": "Ipswich Town",
+  "away": "Fulham",
+  "confirmed": false,
+  "referee": null
+ },
+ {
+  "event": "401878772",
+  "date": "2026-10-10T14:00Z",
+  "home": "Sunderland",
+  "away": "Brighton & Hove Albion",
+  "confirmed": false,
+  "referee": null
+ },
+ {
+  "event": "401878773",
+  "date": "2026-10-10T16:30Z",
+  "home": "Manchester United",
+  "away": "Tottenham Hotspur",
+  "confirmed": false,
+  "referee": null
+ },
+ {
+  "event": "401879266",
+  "date": "2026-10-11T13:00Z",
+  "home": "Crystal Palace",
+  "away": "Nottingham Forest",
+  "confirmed": false,
+  "referee": null
+ },
+ {
+  "event": "401878774",
+  "date": "2026-10-11T13:00Z",
+  "home": "Hull City",
+  "away": "Everton",
+  "confirmed": false,
+  "referee": null
+ },
+ {
+  "event": "401879264",
+  "date": "2026-10-11T15:30Z",
+  "home": "Liverpool",
+  "away": "Manchester City",
+  "confirmed": false,
+  "referee": null
+ },
+ {
+  "event": "401879267",
+  "date": "2026-10-12T19:00Z",
+  "home": "Coventry City",
+  "away": "Newcastle United",
+  "confirmed": false,
+  "referee": null
+ }
+]
