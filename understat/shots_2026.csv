@@ -1547,8 +1547,8 @@ season,match_id,date,h_team,a_team,h_goals,a_goals,shot_id,minute,result,X,Y,xG,
 2026,31235,2026-10-10 16:30:00,Manchester United,Tottenham,1,1,697643,91,Goal,0.9290000152587892,0.4879999923706055,0.3618625402450561,Dominic Solanke,1679,a,OpenPlay,Head,Sandro Tonali,Cross
 2026,31235,2026-10-10 16:30:00,Manchester United,Tottenham,1,1,697644,93,SavedShot,0.769000015258789,0.2710000038146972,0.0160190630704164,Harry Maguire,1687,h,OpenPlay,RightFoot,Carlos Baleba,Pass
 2026,31235,2026-10-10 16:30:00,Manchester United,Tottenham,1,1,697645,98,MissedShots,0.779000015258789,0.525,0.0318177044391632,Carlos Baleba,10527,h,OpenPlay,LeftFoot,Diogo Dalot,Pass
-2026,31236,2026-10-11 13:00:00,Crystal Palace,Nottingham Forest,3,1,697922,2,Goal,0.8440000152587891,0.6859999847412109,0.2846006751060486,Dan Ndoye,8662,a,OpenPlay,RightFoot,,None
-2026,31236,2026-10-11 13:00:00,Crystal Palace,Nottingham Forest,3,1,697923,6,BlockedShot,0.9309999847412108,0.45,0.1319529265165329,Murillo,12123,a,OpenPlay,LeftFoot,,None
+2026,31236,2026-10-11 13:00:00,Crystal Palace,Nottingham Forest,3,1,697922,2,Goal,0.8440000152587891,0.6859999847412109,0.2846006751060486,Dan Ndoye,8662,a,OpenPlay,RightFoot,,
+2026,31236,2026-10-11 13:00:00,Crystal Palace,Nottingham Forest,3,1,697923,6,BlockedShot,0.9309999847412108,0.45,0.1319529265165329,Murillo,12123,a,OpenPlay,LeftFoot,,
 2026,31236,2026-10-11 13:00:00,Crystal Palace,Nottingham Forest,3,1,697924,7,SavedShot,0.933000030517578,0.5,0.1110033467411995,Jørgen Strand Larsen,11070,h,OpenPlay,LeftFoot,Anan Khalaili,Cross
 2026,31236,2026-10-11 13:00:00,Crystal Palace,Nottingham Forest,3,1,697925,7,BlockedShot,0.980999984741211,0.3970000076293945,0.0744337290525436,Jørgen Strand Larsen,11070,h,OpenPlay,RightFoot,,Rebound
 2026,31236,2026-10-11 13:00:00,Crystal Palace,Nottingham Forest,3,1,697926,8,MissedShots,0.93,0.6329999923706054,0.0155947916209697,Jefferson Lerma,2182,h,OpenPlay,Head,Chris Richards,Aerial
@@ -1556,25 +1556,25 @@ season,match_id,date,h_team,a_team,h_goals,a_goals,shot_id,minute,result,X,Y,xG,
 2026,31236,2026-10-11 13:00:00,Crystal Palace,Nottingham Forest,3,1,697928,17,BlockedShot,0.7559999847412109,0.6580000305175782,0.0525963045656681,James McAtee,10126,a,DirectFreekick,LeftFoot,,Standard
 2026,31236,2026-10-11 13:00:00,Crystal Palace,Nottingham Forest,3,1,697929,17,BlockedShot,0.8369999694824218,0.519000015258789,0.0655422136187553,Murillo,12123,a,SetPiece,LeftFoot,Ousmane Diomande,BallTouch
 2026,31236,2026-10-11 13:00:00,Crystal Palace,Nottingham Forest,3,1,697930,18,BlockedShot,0.8859999847412109,0.6070000076293945,0.0435064807534217,Xaver Schlager,7783,a,FromCorner,RightFoot,James McAtee,Cross
-2026,31236,2026-10-11 13:00:00,Crystal Palace,Nottingham Forest,3,1,697931,19,MissedShots,0.835999984741211,0.6580000305175782,0.0343334041535854,Murillo,12123,a,SetPiece,LeftFoot,,None
+2026,31236,2026-10-11 13:00:00,Crystal Palace,Nottingham Forest,3,1,697931,19,MissedShots,0.835999984741211,0.6580000305175782,0.0343334041535854,Murillo,12123,a,SetPiece,LeftFoot,,
 2026,31236,2026-10-11 13:00:00,Crystal Palace,Nottingham Forest,3,1,697932,20,SavedShot,0.9340000152587892,0.585,0.3128910958766937,Dan Ndoye,8662,a,OpenPlay,Head,Morgan Gibbs-White,Cross
-2026,31236,2026-10-11 13:00:00,Crystal Palace,Nottingham Forest,3,1,697933,20,BlockedShot,0.894000015258789,0.500999984741211,0.0974860787391662,Ousmane Diomande,14775,a,FromCorner,RightFoot,,None
+2026,31236,2026-10-11 13:00:00,Crystal Palace,Nottingham Forest,3,1,697933,20,BlockedShot,0.894000015258789,0.500999984741211,0.0974860787391662,Ousmane Diomande,14775,a,FromCorner,RightFoot,,
 2026,31236,2026-10-11 13:00:00,Crystal Palace,Nottingham Forest,3,1,697934,26,MissedShots,0.921999969482422,0.4079999923706054,0.3127340674400329,Daniel Muñoz,12408,a,OpenPlay,RightFoot,Neco Williams,Chipped
 2026,31236,2026-10-11 13:00:00,Crystal Palace,Nottingham Forest,3,1,697935,31,MissedShots,0.8640000152587891,0.3129999923706055,0.0811966136097908,Morgan Gibbs-White,6857,a,OpenPlay,RightFoot,Xaver Schlager,Pass
 2026,31236,2026-10-11 13:00:00,Crystal Palace,Nottingham Forest,3,1,697936,34,BlockedShot,0.79,0.34,0.0284299757331609,Morgan Gibbs-White,6857,a,OpenPlay,RightFoot,Daniel Muñoz,Pass
 2026,31236,2026-10-11 13:00:00,Crystal Palace,Nottingham Forest,3,1,697937,34,SavedShot,0.9490000152587892,0.5070000076293946,0.6509949564933777,Liam Delap,8868,a,OpenPlay,RightFoot,,Rebound
 2026,31236,2026-10-11 13:00:00,Crystal Palace,Nottingham Forest,3,1,697938,39,MissedShots,0.9309999847412108,0.544000015258789,0.3902793526649475,Liam Delap,8868,a,OpenPlay,Head,Daniel Muñoz,Cross
-2026,31236,2026-10-11 13:00:00,Crystal Palace,Nottingham Forest,3,1,697939,40,Goal,0.931999969482422,0.5259999847412109,0.5423418879508972,Daichi Kamada,6145,h,OpenPlay,LeftFoot,Quinten Timber,None
+2026,31236,2026-10-11 13:00:00,Crystal Palace,Nottingham Forest,3,1,697939,40,Goal,0.931999969482422,0.5259999847412109,0.5423418879508972,Daichi Kamada,6145,h,OpenPlay,LeftFoot,Quinten Timber,
 2026,31236,2026-10-11 13:00:00,Crystal Palace,Nottingham Forest,3,1,697940,47,SavedShot,0.7559999847412109,0.5820000076293945,0.0169633720070123,Tyrick Mitchell,8214,h,OpenPlay,LeftFoot,Yeremi Pino,HeadPass
 2026,31236,2026-10-11 13:00:00,Crystal Palace,Nottingham Forest,3,1,697941,48,Goal,0.9569999694824218,0.53,0.475221186876297,Jefferson Lerma,2182,h,FromCorner,Head,Adam Wharton,Cross
-2026,31236,2026-10-11 13:00:00,Crystal Palace,Nottingham Forest,3,1,697945,48,BlockedShot,0.950999984741211,0.4109999847412109,0.0870723500847816,Xaver Schlager,7783,a,OpenPlay,LeftFoot,Morgan Gibbs-White,None
+2026,31236,2026-10-11 13:00:00,Crystal Palace,Nottingham Forest,3,1,697945,48,BlockedShot,0.950999984741211,0.4109999847412109,0.0870723500847816,Xaver Schlager,7783,a,OpenPlay,LeftFoot,Morgan Gibbs-White,
 2026,31236,2026-10-11 13:00:00,Crystal Palace,Nottingham Forest,3,1,697946,48,SavedShot,0.9490000152587892,0.4209999847412109,0.042408537119627,Murillo,12123,a,OpenPlay,Head,,Aerial
 2026,31236,2026-10-11 13:00:00,Crystal Palace,Nottingham Forest,3,1,697947,49,MissedShots,0.7669999694824219,0.379000015258789,0.0216050669550895,Ola Aina,725,a,OpenPlay,RightFoot,Dan Ndoye,Pass
-2026,31236,2026-10-11 13:00:00,Crystal Palace,Nottingham Forest,3,1,697942,50,MissedShots,0.759000015258789,0.3990000152587891,0.0210170894861221,Xaver Schlager,7783,a,OpenPlay,RightFoot,,None
+2026,31236,2026-10-11 13:00:00,Crystal Palace,Nottingham Forest,3,1,697942,50,MissedShots,0.759000015258789,0.3990000152587891,0.0210170894861221,Xaver Schlager,7783,a,OpenPlay,RightFoot,,
 2026,31236,2026-10-11 13:00:00,Crystal Palace,Nottingham Forest,3,1,697943,50,BlockedShot,0.79,0.5309999847412109,0.0362565442919731,Neco Williams,8204,a,OpenPlay,RightFoot,,Rebound
 2026,31236,2026-10-11 13:00:00,Crystal Palace,Nottingham Forest,3,1,697944,50,MissedShots,0.9059999847412108,0.5979999923706054,0.3569703996181488,Dan Ndoye,8662,a,OpenPlay,RightFoot,,Rebound
 2026,31236,2026-10-11 13:00:00,Crystal Palace,Nottingham Forest,3,1,697948,55,SavedShot,0.9230000305175782,0.4479999923706054,0.0872375294566154,Jefferson Lerma,2182,h,FromCorner,Head,Yeremi Pino,Cross
-2026,31236,2026-10-11 13:00:00,Crystal Palace,Nottingham Forest,3,1,697949,58,SavedShot,0.904000015258789,0.539000015258789,0.4376291036605835,Jørgen Strand Larsen,11070,h,OpenPlay,LeftFoot,,None
+2026,31236,2026-10-11 13:00:00,Crystal Palace,Nottingham Forest,3,1,697949,58,SavedShot,0.904000015258789,0.539000015258789,0.4376291036605835,Jørgen Strand Larsen,11070,h,OpenPlay,LeftFoot,,
 2026,31236,2026-10-11 13:00:00,Crystal Palace,Nottingham Forest,3,1,697950,58,Goal,0.9209999847412108,0.5629999923706055,0.4048383235931396,Yeremi Pino,9024,h,OpenPlay,RightFoot,,Rebound
 2026,31236,2026-10-11 13:00:00,Crystal Palace,Nottingham Forest,3,1,697951,64,MissedShots,0.895,0.6419999694824219,0.2231062799692154,Dan Ndoye,8662,a,OpenPlay,LeftFoot,Matz Sels,Pass
 2026,31236,2026-10-11 13:00:00,Crystal Palace,Nottingham Forest,3,1,697952,67,ShotOnPost,0.8159999847412109,0.6669999694824219,0.0357990078628063,Neco Williams,8204,a,OpenPlay,RightFoot,Ibrahim Sangare,Pass
@@ -1589,7 +1589,7 @@ season,match_id,date,h_team,a_team,h_goals,a_goals,shot_id,minute,result,X,Y,xG,
 2026,31237,2026-10-11 13:00:00,Hull,Everton,2,2,697961,21,SavedShot,0.8809999847412109,0.255,0.0692395716905593,Joe Gelhardt,9339,h,OpenPlay,RightFoot,Sorba Thomas,BallRecovery
 2026,31237,2026-10-11 13:00:00,Hull,Everton,2,2,697962,26,SavedShot,0.975,0.529000015258789,0.5690155625343323,Thierno Barry,12916,a,FromCorner,Head,James Garner,Aerial
 2026,31237,2026-10-11 13:00:00,Hull,Everton,2,2,697963,26,MissedShots,0.9769999694824218,0.6120000076293945,0.309538185596466,Jarrad Branthwaite,8476,a,FromCorner,LeftFoot,,Rebound
-2026,31237,2026-10-11 13:00:00,Hull,Everton,2,2,697964,33,BlockedShot,0.8969999694824219,0.504000015258789,0.4480792582035064,Harrison Armstrong,12757,a,OpenPlay,RightFoot,Kiernan Dewsbury-Hall,None
+2026,31237,2026-10-11 13:00:00,Hull,Everton,2,2,697964,33,BlockedShot,0.8969999694824219,0.504000015258789,0.4480792582035064,Harrison Armstrong,12757,a,OpenPlay,RightFoot,Kiernan Dewsbury-Hall,
 2026,31237,2026-10-11 13:00:00,Hull,Everton,2,2,697965,39,BlockedShot,0.8419999694824218,0.7569999694824219,0.0193201601505279,Sorba Thomas,12843,h,OpenPlay,RightFoot,Ryan John Giles,Pass
 2026,31237,2026-10-11 13:00:00,Hull,Everton,2,2,697966,40,BlockedShot,0.899000015258789,0.3609999847412109,0.0899654477834701,Thierno Barry,12916,a,OpenPlay,RightFoot,Harrison Armstrong,Pass
 2026,31237,2026-10-11 13:00:00,Hull,Everton,2,2,697967,41,BlockedShot,0.8719999694824219,0.4079999923706054,0.0117822978645563,Michael Keane,1653,a,FromCorner,Head,James Garner,Aerial
@@ -1604,18 +1604,18 @@ season,match_id,date,h_team,a_team,h_goals,a_goals,shot_id,minute,result,X,Y,xG,
 2026,31237,2026-10-11 13:00:00,Hull,Everton,2,2,697976,52,SavedShot,0.9230000305175782,0.505,0.3529129028320312,Thierno Barry,12916,a,OpenPlay,Head,Brennan Johnson,Cross
 2026,31237,2026-10-11 13:00:00,Hull,Everton,2,2,697977,54,Goal,0.950999984741211,0.4579999923706054,0.3377054929733276,Kiernan Dewsbury-Hall,9739,a,FromCorner,Head,Ainsley Maitland-Niles,Chipped
 2026,31237,2026-10-11 13:00:00,Hull,Everton,2,2,697978,67,Goal,0.875,0.395,0.3313781321048736,Thierno Barry,12916,a,OpenPlay,RightFoot,Kiernan Dewsbury-Hall,BallTouch
-2026,31237,2026-10-11 13:00:00,Hull,Everton,2,2,697979,70,MissedShots,0.870999984741211,0.639000015258789,0.0526149123907089,John Egan,7703,h,OpenPlay,RightFoot,,None
+2026,31237,2026-10-11 13:00:00,Hull,Everton,2,2,697979,70,MissedShots,0.870999984741211,0.639000015258789,0.0526149123907089,John Egan,7703,h,OpenPlay,RightFoot,,
 2026,31237,2026-10-11 13:00:00,Hull,Everton,2,2,697980,73,Goal,0.8630000305175781,0.5379999923706055,0.0915280357003212,Mohamed Belloumi,14760,h,OpenPlay,LeftFoot,Elliot Stroud,TakeOn
 2026,31237,2026-10-11 13:00:00,Hull,Everton,2,2,697981,79,BlockedShot,0.845999984741211,0.5279999923706055,0.0899844542145729,Mohamed Belloumi,14760,h,OpenPlay,LeftFoot,Sorba Thomas,Pass
 2026,31237,2026-10-11 13:00:00,Hull,Everton,2,2,697982,88,MissedShots,0.7559999847412109,0.3,0.0151852611452341,Carlos Alcaraz,11297,a,OpenPlay,RightFoot,Kiernan Dewsbury-Hall,BallRecovery
 2026,31238,2026-10-11 15:30:00,Liverpool,Manchester City,0,3,698242,1,BlockedShot,0.9359999847412108,0.2739999961853027,0.0533863231539726,Víctor Muñoz,13279,h,OpenPlay,RightFoot,Ronald Araújo,TakeOn
-2026,31238,2026-10-11 15:30:00,Liverpool,Manchester City,0,3,698243,20,SavedShot,0.9569999694824218,0.515,0.1328824609518051,Jérémy Jacquet,11545,h,FromCorner,RightFoot,,None
+2026,31238,2026-10-11 15:30:00,Liverpool,Manchester City,0,3,698243,20,SavedShot,0.9569999694824218,0.515,0.1328824609518051,Jérémy Jacquet,11545,h,FromCorner,RightFoot,,
 2026,31238,2026-10-11 15:30:00,Liverpool,Manchester City,0,3,698244,31,BlockedShot,0.9309999847412108,0.4479999923706054,0.1006186828017234,Alexis Mac Allister,8379,h,FromCorner,Head,Florian Wirtz,Cross
 2026,31238,2026-10-11 15:30:00,Liverpool,Manchester City,0,3,698245,32,SavedShot,0.7630000305175781,0.2679999923706054,0.0172242224216461,Víctor Muñoz,13279,h,OpenPlay,LeftFoot,Ryan Gravenberch,Pass
 2026,31238,2026-10-11 15:30:00,Liverpool,Manchester City,0,3,698246,34,SavedShot,0.775,0.64,0.0197719298303127,Enzo Fernández,11356,a,OpenPlay,RightFoot,Mathis Cherki,Pass
 2026,31238,2026-10-11 15:30:00,Liverpool,Manchester City,0,3,698247,37,MissedShots,0.9290000152587892,0.2710000038146972,0.0430411957204341,Mathis Cherki,8094,a,OpenPlay,LeftFoot,Elliot Anderson,Pass
 2026,31238,2026-10-11 15:30:00,Liverpool,Manchester City,0,3,698248,39,MissedShots,0.7819999694824219,0.7419999694824219,0.0193701349198818,Antoine Semenyo,11363,a,OpenPlay,RightFoot,Marc Guehi,Pass
-2026,31238,2026-10-11 15:30:00,Liverpool,Manchester City,0,3,698249,45,BlockedShot,0.7819999694824219,0.4620000076293945,0.0327312536537647,Florian Wirtz,8397,h,OpenPlay,RightFoot,,None
+2026,31238,2026-10-11 15:30:00,Liverpool,Manchester City,0,3,698249,45,BlockedShot,0.7819999694824219,0.4620000076293945,0.0327312536537647,Florian Wirtz,8397,h,OpenPlay,RightFoot,,
 2026,31238,2026-10-11 15:30:00,Liverpool,Manchester City,0,3,698250,47,SavedShot,0.855,0.615,0.0776461064815521,Lewis Koumas,12434,h,OpenPlay,LeftFoot,Bradley Barcola,Pass
 2026,31238,2026-10-11 15:30:00,Liverpool,Manchester City,0,3,698251,47,BlockedShot,0.84,0.4590000152587891,0.0591729506850242,Bradley Barcola,10016,h,OpenPlay,RightFoot,,Rebound
 2026,31238,2026-10-11 15:30:00,Liverpool,Manchester City,0,3,698252,48,SavedShot,0.6709999847412109,0.3659999847412109,0.0141173629090189,Ryan Gravenberch,10697,h,OpenPlay,RightFoot,Alexis Mac Allister,Pass
@@ -1628,7 +1628,7 @@ season,match_id,date,h_team,a_team,h_goals,a_goals,shot_id,minute,result,X,Y,xG,
 2026,31238,2026-10-11 15:30:00,Liverpool,Manchester City,0,3,698259,64,Goal,0.889000015258789,0.419000015258789,0.0885166749358177,Erling Haaland,8260,a,OpenPlay,LeftFoot,,Rebound
 2026,31238,2026-10-11 15:30:00,Liverpool,Manchester City,0,3,698260,67,Goal,0.8380000305175781,0.6519999694824219,0.0569122470915317,Jéremy Doku,8981,a,OpenPlay,RightFoot,Elliot Anderson,Chipped
 2026,31238,2026-10-11 15:30:00,Liverpool,Manchester City,0,3,698261,69,BlockedShot,0.8069999694824219,0.6569999694824219,0.0357491634786129,Mathis Cherki,8094,a,OpenPlay,RightFoot,Jéremy Doku,Pass
-2026,31238,2026-10-11 15:30:00,Liverpool,Manchester City,0,3,698262,71,MissedShots,0.8119999694824219,0.4170000076293945,0.0315943323075771,Elliot Anderson,9154,a,FromCorner,LeftFoot,,None
+2026,31238,2026-10-11 15:30:00,Liverpool,Manchester City,0,3,698262,71,MissedShots,0.8119999694824219,0.4170000076293945,0.0315943323075771,Elliot Anderson,9154,a,FromCorner,LeftFoot,,
 2026,31238,2026-10-11 15:30:00,Liverpool,Manchester City,0,3,698263,73,MissedShots,0.914000015258789,0.685,0.0778984576463699,Josko Gvardiol,9790,a,OpenPlay,LeftFoot,Jéremy Doku,Pass
 2026,31238,2026-10-11 15:30:00,Liverpool,Manchester City,0,3,698264,77,Goal,0.955999984741211,0.5259999847412109,0.7523168921470642,Mathis Cherki,8094,a,OpenPlay,RightFoot,Josko Gvardiol,TakeOn
 2026,31238,2026-10-11 15:30:00,Liverpool,Manchester City,0,3,698265,86,SavedShot,0.77,0.409000015258789,0.0741972103714943,Alexis Mac Allister,8379,h,DirectFreekick,RightFoot,,Standard
@@ -1636,3 +1636,31 @@ season,match_id,date,h_team,a_team,h_goals,a_goals,shot_id,minute,result,X,Y,xG,
 2026,31238,2026-10-11 15:30:00,Liverpool,Manchester City,0,3,698267,88,MissedShots,0.7869999694824219,0.515,0.024902805685997,Ayyoub Bouaddi,12162,a,OpenPlay,RightFoot,,Rebound
 2026,31238,2026-10-11 15:30:00,Liverpool,Manchester City,0,3,698268,92,BlockedShot,0.855,0.2639999961853027,0.0422553531825542,Mathis Cherki,8094,a,OpenPlay,LeftFoot,Ayyoub Bouaddi,Pass
 2026,31238,2026-10-11 15:30:00,Liverpool,Manchester City,0,3,698269,93,MissedShots,0.7759999847412109,0.595,0.0152879254892468,Elliot Anderson,9154,a,FromCorner,RightFoot,Mathis Cherki,TakeOn
+2026,31239,2026-10-12 19:00:00,Coventry,Newcastle United,4,1,698527,5,Goal,0.885,0.5,0.7611688375473022,Jack Rudoni,14747,h,Penalty,LeftFoot,,Standard
+2026,31239,2026-10-12 19:00:00,Coventry,Newcastle United,4,1,698528,9,BlockedShot,0.8169999694824219,0.5359999847412109,0.0544534176588058,Harvey Barnes,6681,a,OpenPlay,RightFoot,Nico González,Pass
+2026,31239,2026-10-12 19:00:00,Coventry,Newcastle United,4,1,698529,12,SavedShot,0.855999984741211,0.5870000076293945,0.0679985657334327,Harvey Barnes,6681,a,OpenPlay,RightFoot,Joe Willock,Pass
+2026,31239,2026-10-12 19:00:00,Coventry,Newcastle United,4,1,698530,22,BlockedShot,0.86,0.7519999694824219,0.0326496958732605,Joe Willock,6630,a,OpenPlay,RightFoot,Lewis Hall,TakeOn
+2026,31239,2026-10-12 19:00:00,Coventry,Newcastle United,4,1,698531,22,MissedShots,0.916999969482422,0.534000015258789,0.1218922659754753,Harvey Barnes,6681,a,OpenPlay,RightFoot,,Rebound
+2026,31239,2026-10-12 19:00:00,Coventry,Newcastle United,4,1,698532,28,SavedShot,0.860999984741211,0.3240000152587891,0.1124611347913742,Sidiki Chérif,12847,h,OpenPlay,RightFoot,Milan van Ewijk,BallRecovery
+2026,31239,2026-10-12 19:00:00,Coventry,Newcastle United,4,1,698533,29,MissedShots,0.7619999694824219,0.3129999923706055,0.0152724189683794,Jacob Murphy,6063,a,OpenPlay,RightFoot,,None
+2026,31239,2026-10-12 19:00:00,Coventry,Newcastle United,4,1,698534,30,MissedShots,0.975999984741211,0.44,0.5544856786727905,Jacob Murphy,6063,a,OpenPlay,RightFoot,Harvey Barnes,Cross
+2026,31239,2026-10-12 19:00:00,Coventry,Newcastle United,4,1,698535,37,BlockedShot,0.845,0.6270000076293946,0.0591107122600078,Joe Willock,6630,a,OpenPlay,RightFoot,Harvey Barnes,Pass
+2026,31239,2026-10-12 19:00:00,Coventry,Newcastle United,4,1,698536,42,BlockedShot,0.89,0.4170000076293945,0.8070139288902283,Matias Fernandez-Pardo,13051,a,OpenPlay,RightFoot,Nico González,TakeOn
+2026,31239,2026-10-12 19:00:00,Coventry,Newcastle United,4,1,698537,43,BlockedShot,0.8219999694824218,0.6129999923706054,0.0504784062504768,Joe Willock,6630,a,OpenPlay,RightFoot,Nico González,Pass
+2026,31239,2026-10-12 19:00:00,Coventry,Newcastle United,4,1,698538,47,Goal,0.8119999694824219,0.5079999923706054,0.0659676492214202,Sidiki Chérif,12847,h,OpenPlay,RightFoot,,None
+2026,31239,2026-10-12 19:00:00,Coventry,Newcastle United,4,1,698539,49,MissedShots,0.978000030517578,0.5770000076293945,0.1288894563913345,Joe Willock,6630,a,OpenPlay,Head,Jacob Murphy,Cross
+2026,31239,2026-10-12 19:00:00,Coventry,Newcastle United,4,1,698540,52,SavedShot,0.76,0.414000015258789,0.0195291563868522,Yoane Wissa,5786,a,OpenPlay,RightFoot,Harvey Barnes,Pass
+2026,31239,2026-10-12 19:00:00,Coventry,Newcastle United,4,1,698541,54,BlockedShot,0.8909999847412109,0.5890000152587891,0.4293967485427856,Sidiki Chérif,12847,h,OpenPlay,RightFoot,,None
+2026,31239,2026-10-12 19:00:00,Coventry,Newcastle United,4,1,698542,58,MissedShots,0.899000015258789,0.374000015258789,0.0895348787307739,Joe Willock,6630,a,OpenPlay,RightFoot,Jacob Murphy,Pass
+2026,31239,2026-10-12 19:00:00,Coventry,Newcastle United,4,1,698543,60,SavedShot,0.785,0.2529999923706054,0.0099497027695178,Bazoumana Touré,13427,a,OpenPlay,LeftFoot,,None
+2026,31239,2026-10-12 19:00:00,Coventry,Newcastle United,4,1,698544,69,Goal,0.8159999847412109,0.7230000305175781,0.0212413016706705,Sven Botman,8635,a,OpenPlay,LeftFoot,Nico González,Pass
+2026,31239,2026-10-12 19:00:00,Coventry,Newcastle United,4,1,698545,71,SavedShot,0.764000015258789,0.6609999847412109,0.0209891684353351,Lewis Hall,10216,a,FromCorner,LeftFoot,Nico González,Pass
+2026,31239,2026-10-12 19:00:00,Coventry,Newcastle United,4,1,698546,74,BlockedShot,0.8769999694824219,0.4720000076293945,0.0738889202475547,Yoane Wissa,5786,a,OpenPlay,RightFoot,,BlockedPass
+2026,31239,2026-10-12 19:00:00,Coventry,Newcastle United,4,1,698547,79,MissedShots,0.8440000152587891,0.2989999961853027,0.0333718657493591,Bazoumana Touré,13427,a,OpenPlay,LeftFoot,Matias Fernandez-Pardo,Pass
+2026,31239,2026-10-12 19:00:00,Coventry,Newcastle United,4,1,698548,80,Goal,0.8640000152587891,0.600999984741211,0.0905268564820289,Ellis Simms,8582,h,OpenPlay,RightFoot,Brandon Thomas-Asante,BallTouch
+2026,31239,2026-10-12 19:00:00,Coventry,Newcastle United,4,1,698549,83,BlockedShot,0.745,0.4029999923706054,0.0199295040220022,Brandon Thomas-Asante,14745,h,OpenPlay,RightFoot,,TakeOn
+2026,31239,2026-10-12 19:00:00,Coventry,Newcastle United,4,1,698550,83,BlockedShot,0.8140000152587891,0.4770000076293945,0.0353712327778339,Frank Onyeka,9681,h,OpenPlay,RightFoot,,Rebound
+2026,31239,2026-10-12 19:00:00,Coventry,Newcastle United,4,1,698551,84,SavedShot,0.955999984741211,0.4509999847412109,0.0712925791740417,Stephen Mfuni,14054,h,FromCorner,Head,Victor Torp,Aerial
+2026,31239,2026-10-12 19:00:00,Coventry,Newcastle United,4,1,698552,85,Goal,0.8440000152587891,0.6419999694824219,0.0788130313158035,Stephen Mfuni,14054,h,OpenPlay,LeftFoot,Jay Dasilva,Pass
+2026,31239,2026-10-12 19:00:00,Coventry,Newcastle United,4,1,698553,89,MissedShots,0.884000015258789,0.649000015258789,0.0430890470743179,William Osula,9556,a,OpenPlay,LeftFoot,Nico González,Chipped
+2026,31239,2026-10-12 19:00:00,Coventry,Newcastle United,4,1,698554,91,BlockedShot,0.7580000305175781,0.3879999923706054,0.018787071108818,Amar Dedic,13456,a,OpenPlay,RightFoot,Harvey Barnes,Pass
