@@ -1,1 +1,42 @@
-[]
+[
+ {
+  "event": "401878771",
+  "date": "2026-10-17T11:30Z",
+  "home": "Everton",
+  "away": "Chelsea",
+  "confirmed": false,
+  "referee": null
+ },
+ {
+  "event": "401879262",
+  "date": "2026-10-17T14:00Z",
+  "home": "Brentford",
+  "away": "Liverpool",
+  "confirmed": false,
+  "referee": null
+ },
+ {
+  "event": "401878770",
+  "date": "2026-10-17T14:00Z",
+  "home": "Fulham",
+  "away": "Hull City",
+  "confirmed": false,
+  "referee": null
+ },
+ {
+  "event": "401879259",
+  "date": "2026-10-17T14:00Z",
+  "home": "Manchester City",
+  "away": "Ipswich Town",
+  "confirmed": false,
+  "referee": null
+ },
+ {
+  "event": "401879258",
+  "date": "2026-10-17T16:30Z",
+  "home": "Newcastle United",
+  "away": "Aston Villa",
+  "confirmed": false,
+  "referee": null
+ }
+]
