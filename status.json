@@ -2,7 +2,7 @@
   "sources": {
     "football-data": {
       "ok": true,
-      "updated_at": "2026-10-17T05:46:33+00:00",
+      "updated_at": "2026-10-18T05:46:41+00:00",
       "written": [
         "E0_2627.csv",
         "E1_2627.csv",
@@ -12,22 +12,22 @@
     },
     "understat": {
       "ok": true,
-      "updated_at": "2026-10-17T05:46:35+00:00",
-      "matches_fetched": 0,
+      "updated_at": "2026-10-18T05:46:45+00:00",
+      "matches_fetched": 5,
       "failures": []
     },
     "fpl": {
       "ok": true,
-      "updated_at": "2026-10-17T05:46:38+00:00",
+      "updated_at": "2026-10-18T05:46:50+00:00",
       "season": 2026,
       "players": 667,
-      "history_rows": 2558,
+      "history_rows": 3035,
       "failures": []
     },
     "espn": {
       "ok": true,
-      "updated_at": "2026-10-17T05:47:49+00:00",
-      "matches_fetched": 54,
+      "updated_at": "2026-10-18T05:48:12+00:00",
+      "matches_fetched": 45,
       "failures": [],
       "competitions_failed": {}
     },
@@ -39,11 +39,11 @@
     },
     "lineups": {
       "ok": true,
-      "updated_at": "2026-10-17T05:48:13+00:00",
-      "matches": 10,
+      "updated_at": "2026-10-18T05:49:02+00:00",
+      "matches": 5,
       "confirmed": 0,
       "failures": []
     }
   },
-  "updated_at": "2026-10-17T05:48:15+00:00"
+  "updated_at": "2026-10-18T05:49:03+00:00"
 }
