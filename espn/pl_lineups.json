@@ -1,37 +1,5 @@
 [
  {
-  "event": "401879263",
-  "date": "2026-10-18T13:00Z",
-  "home": "AFC Bournemouth",
-  "away": "Sunderland",
-  "confirmed": false,
-  "referee": null
- },
- {
-  "event": "401879261",
-  "date": "2026-10-18T13:00Z",
-  "home": "Brighton & Hove Albion",
-  "away": "Crystal Palace",
-  "confirmed": false,
-  "referee": null
- },
- {
-  "event": "401879260",
-  "date": "2026-10-18T13:00Z",
-  "home": "Leeds United",
-  "away": "Manchester United",
-  "confirmed": false,
-  "referee": null
- },
- {
-  "event": "401878769",
-  "date": "2026-10-18T15:30Z",
-  "home": "Nottingham Forest",
-  "away": "Arsenal",
-  "confirmed": false,
-  "referee": null
- },
- {
   "event": "401879257",
   "date": "2026-10-19T19:00Z",
   "home": "Tottenham Hotspur",
