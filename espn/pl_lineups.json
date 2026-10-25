@@ -1,37 +1,5 @@
 [
  {
-  "event": "401879256",
-  "date": "2026-10-24T11:30Z",
-  "home": "Aston Villa",
-  "away": "Manchester City",
-  "confirmed": false,
-  "referee": null
- },
- {
-  "event": "401878768",
-  "date": "2026-10-24T14:00Z",
-  "home": "Arsenal",
-  "away": "Everton",
-  "confirmed": false,
-  "referee": null
- },
- {
-  "event": "401879255",
-  "date": "2026-10-24T14:00Z",
-  "home": "Coventry City",
-  "away": "Fulham",
-  "confirmed": false,
-  "referee": null
- },
- {
-  "event": "401878767",
-  "date": "2026-10-24T16:30Z",
-  "home": "Chelsea",
-  "away": "Tottenham Hotspur",
-  "confirmed": false,
-  "referee": null
- },
- {
   "event": "401879254",
   "date": "2026-10-25T14:00Z",
   "home": "Crystal Palace",
