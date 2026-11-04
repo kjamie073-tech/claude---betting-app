@@ -2,7 +2,7 @@
   "sources": {
     "football-data": {
       "ok": true,
-      "updated_at": "2026-11-03T12:52:11+00:00",
+      "updated_at": "2026-11-04T13:03:56+00:00",
       "written": [
         "E0_2627.csv",
         "E1_2627.csv",
@@ -12,13 +12,13 @@
     },
     "understat": {
       "ok": false,
-      "failed_at": "2026-11-03T12:52:14+00:00",
-      "error": "ConnectTimeout: HTTPSConnectionPool(host='understat.com', port=443): Max retries exceeded with url: / (Caused by ConnectTimeoutError(<HTTPSConnection(host='understat.com', port=443) at 0x7cba57dfec30>, 'Connection to understat.com timed out. (connect timeout=60)'))",
+      "failed_at": "2026-11-04T13:03:58+00:00",
+      "error": "ValueError: datesData not found in page",
       "last_success": "2026-11-01T05:58:48+00:00"
     },
     "fpl": {
       "ok": true,
-      "updated_at": "2026-11-03T12:56:29+00:00",
+      "updated_at": "2026-11-04T13:03:59+00:00",
       "season": 2026,
       "players": 670,
       "history_rows": 4017,
@@ -26,8 +26,8 @@
     },
     "espn": {
       "ok": true,
-      "updated_at": "2026-11-03T12:57:48+00:00",
-      "matches_fetched": 0,
+      "updated_at": "2026-11-04T13:05:15+00:00",
+      "matches_fetched": 9,
       "failures": [],
       "competitions_failed": {}
     },
@@ -39,11 +39,11 @@
     },
     "lineups": {
       "ok": true,
-      "updated_at": "2026-11-03T12:58:31+00:00",
-      "matches": 1,
+      "updated_at": "2026-11-04T13:05:39+00:00",
+      "matches": 5,
       "confirmed": 0,
       "failures": []
     }
   },
-  "updated_at": "2026-11-03T12:58:32+00:00"
+  "updated_at": "2026-11-04T13:05:40+00:00"
 }
