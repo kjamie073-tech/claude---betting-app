@@ -4,7 +4,57 @@
   "date": "2026-11-06T20:00Z",
   "home": "Everton",
   "away": "Coventry City",
-  "confirmed": false,
+  "confirmed": true,
+  "home_xi": [
+   "Jordan Pickford",
+   "Jarrad Branthwaite",
+   "James Tarkowski",
+   "Vitaliy Mykolenko",
+   "Merlin Röhl",
+   "Kiernan Dewsbury-Hall",
+   "James Garner",
+   "Harrison Armstrong",
+   "Thierno Barry",
+   "Tyrique George",
+   "Tyler Dibling"
+  ],
+  "home_bench": [
+   "Jake O'Brien",
+   "Braiden Graham",
+   "Michael Keane",
+   "Charly Alcaraz",
+   "Mark Travers",
+   "Brennan Johnson",
+   "Christian Nørgaard",
+   "Ainsley Maitland-Niles",
+   "Hayden Hackney"
+  ],
+  "home_formation": "4-2-3-1",
+  "away_xi": [
+   "Carl Rushworth",
+   "Ethan Pinnock",
+   "Stephen Mfuni",
+   "Jay Da Silva",
+   "Milan van Ewijk",
+   "Jack Rudoni",
+   "Victor Torp",
+   "Caleb Yirenkyi",
+   "Taiwo Awoniyi",
+   "Yann Gboho",
+   "Tatsuhiro Sakamoto"
+  ],
+  "away_bench": [
+   "Joel Latibeaudiere",
+   "Sidiki Cherif",
+   "Loum Tchaouna",
+   "Matt Grimes",
+   "Gustavo Hamer",
+   "Daniel Bentley",
+   "Kaine Kesler Hayden",
+   "Brandon Thomas-Asante",
+   "Ellis Simms"
+  ],
+  "away_formation": "4-2-3-1",
   "referee": null
  },
  {
