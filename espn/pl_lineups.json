@@ -4,7 +4,57 @@
   "date": "2026-11-21T12:30Z",
   "home": "Manchester City",
   "away": "Fulham",
-  "confirmed": false,
+  "confirmed": true,
+  "home_xi": [
+   "Gianluigi Donnarumma",
+   "Marc Guéhi",
+   "Rúben Dias",
+   "Nico O'Reilly",
+   "Abdukodir Khusanov",
+   "Phil Foden",
+   "Ayyoub Bouaddi",
+   "Elliot Anderson",
+   "Erling Haaland",
+   "Jérémy Doku",
+   "Iliman Ndiaye"
+  ],
+  "home_bench": [
+   "Gerónimo Rulli",
+   "Josko Gvardiol",
+   "Mateo Kovacic",
+   "Vitor Reis",
+   "Enzo Fernández",
+   "Floyd Samba",
+   "Rico Lewis",
+   "Rayan Cherki",
+   "Allan Elias"
+  ],
+  "home_formation": "4-2-3-1",
+  "away_xi": [
+   "Bernd Leno",
+   "Calvin Bassey",
+   "David Affengruber",
+   "Ryan Sessegnon",
+   "Kenny Tete",
+   "Shea Charles",
+   "Alex Iwobi",
+   "Sander Berge",
+   "Josh King",
+   "Rodrigo Muniz",
+   "Oscar Bobb"
+  ],
+  "away_bench": [
+   "Timothy Castagne",
+   "Hugo Larsson",
+   "Jorge Cuenca",
+   "Antonee Robinson",
+   "Gonzalo García",
+   "Tom Cairney",
+   "Dino Kaiser",
+   "Manuel Ángel",
+   "César Palacios"
+  ],
+  "away_formation": "4-3-3",
   "referee": null
  },
  {
